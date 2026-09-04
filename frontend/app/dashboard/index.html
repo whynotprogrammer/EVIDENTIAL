@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVIDENTIAL — Enterprise Command Center</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+    
+    /* Header */
+    header { background-color: #020617; border-bottom: 1px solid #1e293b; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .brand { display: flex; items-center; gap: 12px; }
+    .logo-badge { width: 32px; height: 32px; border-radius: 6px; background-color: #2563eb; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: white; letter-spacing: 1px; }
+    .brand-text h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; color: #ffffff; }
+    .brand-text span { font-size: 11px; color: #94a3b8; margin-left: 8px; border-left: 1px solid #334155; padding-left: 8px; text-transform: uppercase; }
+    .status-pill { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; background: rgba(6, 95, 70, 0.4); border: 1px solid #065f46; color: #34d399; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; }
+
+    /* Navigation Bar (All 8 Modules) */
+    nav { background-color: #0f172a; border-bottom: 1px solid #1e293b; padding: 0 24px; display: flex; gap: 4px; overflow-x: auto; }
+    .nav-btn { background: transparent; border: none; padding: 14px 16px; font-size: 13px; font-weight: 600; color: #94a3b8; border-bottom: 2px solid transparent; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; transition: 0.15s; }
+    .nav-btn:hover { color: #f8fafc; border-color: #475569; }
+    .nav-btn.active { color: #38bdf8; border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+    .nav-badge { font-size: 10px; font-family: monospace; background: #1e293b; color: #cbd5e1; padding: 2px 6px; border-radius: 10px; border: 1px solid #334155; }
+
+    /* Layout */
+    main { padding: 24px; max-width: 1400px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+
+    /* 6 KPI Cards */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .kpi-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; }
+    .kpi-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; }
+    .kpi-value { font-size: 26px; font-weight: 800; font-family: ui-monospace, SFMono-Regular, monospace; margin-top: 6px; display: block; }
+    .kpi-sub { font-size: 11px; color: #64748b; margin-top: 4px; display: block; }
+
+    .val-total { color: #f8fafc; }
+    .val-active { color: #34d399; }
+    .val-docs { color: #60a5fa; }
+    .val-evid { color: #fbbf24; }
+    .val-corr { color: #c084fc; }
+    .val-audit { color: #22d3ee; }
+
+    /* Charts Section */
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .chart-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #334155; margin-bottom: 14px; }
+    .card-header h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #e2e8f0; }
+    .card-meta { font-size: 11px; color: #94a3b8; }
+    
+    .chart-bars { display: flex; flex-direction: column; gap: 10px; }
+    .bar-row { font-size: 12px; }
+    .bar-meta { display: flex; justify-content: space-between; margin-bottom: 4px; color: #cbd5e1; }
+    .bar-bg { width: 100%; height: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; }
+
+    .fill-blue { background: #3b82f6; }
+    .fill-purple { background: #a855f7; }
+    .fill-amber { background: #f59e0b; }
+    .fill-emerald { background: #10b981; }
+
+    .timeline-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 12px; font-family: monospace; }
+    
+    /* Activity Streams */
+    .activity-panel { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 18px; }
+    .activity-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; border-bottom: 1px solid #334155; flex-wrap: wrap; gap: 12px; }
+    .activity-tabs { display: flex; background: #0f172a; padding: 3px; border-radius: 6px; border: 1px solid #334155; gap: 2px; }
+    .tab-btn { background: transparent; border: none; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #94a3b8; border-radius: 4px; cursor: pointer; transition: 0.1s; }
+    .tab-btn.active { background: #2563eb; color: white; }
+    
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; margin-top: 12px; }
+    th { color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 11px; padding: 10px; border-bottom: 1px solid #334155; background: rgba(15, 23, 42, 0.4); }
+    td { padding: 10px; border-bottom: 1px solid #334155; color: #e2e8f0; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .status-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid #475569; background: #334155; color: #f1f5f9; }
+    .mono { font-family: ui-monospace, SFMono-Regular, monospace; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="logo-badge">EV</div>
+      <div class="brand-text">
+        <h1>EVIDENTIAL</h1>
+        <span>COMMAND CENTER — ENTERPRISE INVESTIGATION</span>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div class="status-pill">
+        <span class="dot"></span>
+        SYSTEM OPERATIONAL
+      </div>
+      <span class="mono" style="font-size: 12px; color: #94a3b8;">UTC <span id="clock">02:15:00</span></span>
+    </div>
+  </header>
+
+  <!-- Navigation Bar (8 Modules) -->
+  <nav>
+    <button class="nav-btn active" onclick="setNav('Dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="setNav('Cases')">Cases <span class="nav-badge">50</span></button>
+    <button class="nav-btn" onclick="setNav('Documents')">Documents <span class="nav-badge">148</span></button>
+    <button class="nav-btn" onclick="setNav('Evidence')">Evidence <span class="nav-badge">86</span></button>
+    <button class="nav-btn" onclick="setNav('Investigation')">Investigation</button>
+    <button class="nav-btn" onclick="setNav('Correlation')">Correlation <span class="nav-badge">14</span></button>
+    <button class="nav-btn" onclick="setNav('AI Copilot')">AI Copilot</button>
+    <button class="nav-btn" onclick="setNav('Audit')">Audit <span class="nav-badge">120</span></button>
+  </nav>
+
+  <main>
+    <!-- 6 Required KPI Cards -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">TOTAL CASES</span>
+        <span class="kpi-value val-total">50</span>
+        <span class="kpi-sub">All registered FIRs</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label" style="color: #34d399;">ACTIVE CASES</span>
+        <span class="kpi-value val-active">32</span>
+        <span class="kpi-sub">Under active inquiry</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label" style="color: #60a5fa;">DOCUMENTS PROCESSED</span>
+        <span class="kpi-value val-docs">148</span>
+        <span class="kpi-sub">OCR & Translations</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label" style="color: #fbbf24;">EVIDENCE ITEMS</span>
+        <span class="kpi-value val-evid">86</span>
+        <span class="kpi-sub">SHA-256 Hashed</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label" style="color: #c084fc;">POTENTIAL CORRELATIONS</span>
+        <span class="kpi-value val-corr">14</span>
+        <span class="kpi-sub">Cross-case links</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label" style="color: #22d3ee;">AUDIT EVENTS</span>
+        <span class="kpi-value val-audit">120</span>
+        <span class="kpi-sub">Chain verified</span>
+      </div>
+    </section>
+
+    <!-- 4 Required Operational Charts -->
+    <section class="charts-grid">
+      <!-- Chart 1: Cases by status -->
+      <div class="chart-card">
+        <div class="card-header">
+          <h3>Cases by Status</h3>
+          <span class="card-meta">Total: 50</span>
+        </div>
+        <div class="chart-bars">
+          <div class="bar-row">
+            <div class="bar-meta"><span>ACTIVE</span><span class="mono">24 (48%)</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-blue" style="width: 48%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>UNDER_INVESTIGATION</span><span class="mono">18 (36%)</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-blue" style="width: 36%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>PENDING_TRIAL</span><span class="mono">8 (16%)</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-blue" style="width: 16%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>CLOSED</span><span class="mono">14 (28%)</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-blue" style="width: 28%;"></div></div>
+          </div>
+        </div>
+        <span style="font-size: 11px; color: #64748b; margin-top: 14px;">Operational caseload</span>
+      </div>
+
+      <!-- Chart 2: Cases by crime type -->
+      <div class="chart-card">
+        <div class="card-header">
+          <h3>Cases by Crime Type</h3>
+          <span class="card-meta">Category</span>
+        </div>
+        <div class="chart-bars">
+          <div class="bar-row">
+            <div class="bar-meta"><span>Cyber Crime</span><span class="mono">26</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-purple" style="width: 100%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Financial Fraud</span><span class="mono">18</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-purple" style="width: 69%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Narcotics</span><span class="mono">11</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-purple" style="width: 42%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Physical Intrusion</span><span class="mono">6</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-purple" style="width: 23%;"></div></div>
+          </div>
+        </div>
+        <span style="font-size: 11px; color: #64748b; margin-top: 14px;">FIR legal classification</span>
+      </div>
+
+      <!-- Chart 3: Cases by language -->
+      <div class="chart-card">
+        <div class="card-header">
+          <h3>Cases by Language</h3>
+          <span class="card-meta">Multilingual</span>
+        </div>
+        <div class="chart-bars">
+          <div class="bar-row">
+            <div class="bar-meta"><span>English</span><span class="mono">68 docs</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-amber" style="width: 100%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Hindi</span><span class="mono">44 docs</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-amber" style="width: 65%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Bengali</span><span class="mono">16 docs</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-amber" style="width: 24%;"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-meta"><span>Marathi</span><span class="mono">12 docs</span></div>
+            <div class="bar-bg"><div class="bar-fill fill-amber" style="width: 18%;"></div></div>
+          </div>
+        </div>
+        <span style="font-size: 11px; color: #64748b; margin-top: 14px;">NLP & OCR processing</span>
+      </div>
+
+      <!-- Chart 4: Evidence activity -->
+      <div class="chart-card">
+        <div class="card-header">
+          <h3>Evidence Activity</h3>
+          <span class="card-meta mono" style="color: #34d399;">In / Ver</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <div class="timeline-row"><span>2024-10-06</span><span style="color: #f59e0b;">+8 in</span><span style="color: #10b981;">✓7 ver</span></div>
+          <div class="timeline-row"><span>2024-10-08</span><span style="color: #f59e0b;">+15 in</span><span style="color: #10b981;">✓14 ver</span></div>
+          <div class="timeline-row"><span>2024-10-10</span><span style="color: #f59e0b;">+22 in</span><span style="color: #10b981;">✓20 ver</span></div>
+          <div class="timeline-row"><span>2024-10-12</span><span style="color: #f59e0b;">+25 in</span><span style="color: #10b981;">✓24 ver</span></div>
+        </div>
+        <span style="font-size: 11px; color: #64748b; margin-top: 14px;">Forensic chain throughput</span>
+      </div>
+    </section>
+
+    <!-- Recent Activity Section (4 Required Streams) -->
+    <section class="activity-panel">
+      <div class="activity-header">
+        <div>
+          <h2 style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #f8fafc;">Recent Operational Activity</h2>
+          <p style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Real-time event and telemetry streams</p>
+        </div>
+        <div class="activity-tabs">
+          <button class="tab-btn active" onclick="setTab('cases')">Latest Cases</button>
+          <button class="tab-btn" onclick="setTab('documents')">Latest Documents</button>
+          <button class="tab-btn" onclick="setTab('correlations')">Latest Correlations</button>
+          <button class="tab-btn" onclick="setTab('audit')">Latest Audit Events</button>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <!-- Cases Tab -->
+        <div id="tab-cases">
+          <table>
+            <thead>
+              <tr>
+                <th>Case ID</th><th>FIR Number</th><th>Title</th><th>Crime Type</th><th>Status</th><th style="text-align: right;">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono" style="color: #60a5fa;">CASE-2024-001</td><td class="mono">FIR-2024-088</td><td style="font-weight: 600;">Meridian Vault Cyber Heist</td><td>Cyber Crime</td><td><span class="status-badge">UNDER_INVESTIGATION</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-12 14:30</td></tr>
+              <tr><td class="mono" style="color: #60a5fa;">CASE-2024-002</td><td class="mono">FIR-2024-331</td><td style="font-weight: 600;">Harbour Docks Narcotics</td><td>Narcotics</td><td><span class="status-badge">PENDING_TRIAL</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-11 18:15</td></tr>
+              <tr><td class="mono" style="color: #60a5fa;">CASE-2024-003</td><td class="mono">FIR-2024-412</td><td style="font-weight: 600;">Apex Global Laundering</td><td>Financial Fraud</td><td><span class="status-badge">ACTIVE</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-10 11:00</td></tr>
+              <tr><td class="mono" style="color: #60a5fa;">CASE-2024-004</td><td class="mono">FIR-2024-502</td><td style="font-weight: 600;">Metro Grid Ransomware</td><td>Cyber Crime</td><td><span class="status-badge">ACTIVE</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-09 09:45</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Documents Tab -->
+        <div id="tab-documents" style="display: none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Doc ID</th><th>Case ID</th><th>Title</th><th>Type</th><th>Language</th><th style="text-align: right;">Uploaded</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono" style="color: #f59e0b;">DOC-FIR-001</td><td class="mono">CASE-2024-001</td><td style="font-weight: 600;">First Information Report</td><td>FIR</td><td>English</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-12 09:30</td></tr>
+              <tr><td class="mono" style="color: #f59e0b;">DOC-WIT-002</td><td class="mono">CASE-2024-001</td><td style="font-weight: 600;">Guard Statement Sunil Sharma</td><td>WITNESS_STATEMENT</td><td>Hindi</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-12 14:00</td></tr>
+              <tr><td class="mono" style="color: #f59e0b;">DOC-EVID-003</td><td class="mono">CASE-2024-001</td><td style="font-weight: 600;">Seizure Memo - Kingston USB</td><td>SEIZURE_MEMO</td><td>English</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-13 16:40</td></tr>
+              <tr><td class="mono" style="color: #f59e0b;">DOC-FOR-005</td><td class="mono">CASE-2024-001</td><td style="font-weight: 600;">Cyber Forensic Report - Breach</td><td>FORENSIC_REPORT</td><td>English</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 10:15</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Correlations Tab -->
+        <div id="tab-correlations" style="display: none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Corr ID</th><th>Entity A</th><th>Entity B</th><th>Match Type</th><th>Confidence</th><th style="text-align: right;">Detected</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono" style="color: #c084fc;">CORR-991</td><td style="font-weight: 600;">Vikram Malhotra (CASE-001)</td><td style="font-weight: 600;">FIR-2024-012 (Phishing)</td><td>IDENTITY_MATCH</td><td class="mono" style="color: #34d399; font-weight: 700;">96%</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-12 10:15</td></tr>
+              <tr><td class="mono" style="color: #c084fc;">CORR-992</td><td style="font-weight: 600;">Kingston USB BC-88192</td><td style="font-weight: 600;">Malware Repository</td><td>CRYPTOGRAPHIC_HASH</td><td class="mono" style="color: #34d399; font-weight: 700;">99%</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-12 11:20</td></tr>
+              <tr><td class="mono" style="color: #c084fc;">CORR-993</td><td style="font-weight: 600;">Dark Sedan (River Road)</td><td style="font-weight: 600;">CCTV Gate B Alleyway</td><td>VISUAL_MATCH</td><td class="mono" style="color: #34d399; font-weight: 700;">88%</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-13 17:00</td></tr>
+              <tr><td class="mono" style="color: #c084fc;">CORR-994</td><td style="font-weight: 600;">Container MSC-4491</td><td style="font-weight: 600;">Apex Bill of Lading</td><td>CROSS_CASE_ENTITY</td><td class="mono" style="color: #34d399; font-weight: 700;">92%</td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 08:30</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Audit Tab -->
+        <div id="tab-audit" style="display: none;">
+          <table>
+            <thead>
+              <tr>
+                <th>Audit ID</th><th>User</th><th>Action</th><th>Target</th><th>Status</th><th style="text-align: right;">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono" style="color: #22d3ee;">AUDIT-L01</td><td style="font-weight: 600;">INV-101</td><td>AI_QUERY</td><td>COPILOT: QUERY-882</td><td><span class="status-badge" style="color: #34d399; border-color: #065f46;">SUCCESS</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 11:00</td></tr>
+              <tr><td class="mono" style="color: #22d3ee;">AUDIT-L02</td><td style="font-weight: 600;">SYSTEM</td><td>EVIDENCE_VERIFIED</td><td>EVIDENCE: EVID-001</td><td><span class="status-badge" style="color: #34d399; border-color: #065f46;">SUCCESS</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 10:45</td></tr>
+              <tr><td class="mono" style="color: #22d3ee;">AUDIT-L03</td><td style="font-weight: 600;">INV-102</td><td>CORRELATION_EXECUTED</td><td>GRAPH: GRAPH-01</td><td><span class="status-badge" style="color: #34d399; border-color: #065f46;">SUCCESS</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 10:15</td></tr>
+              <tr><td class="mono" style="color: #22d3ee;">AUDIT-L04</td><td style="font-weight: 600;">INV-101</td><td>CASE_VIEWED</td><td>CASE: CASE-2024-001</td><td><span class="status-badge" style="color: #34d399; border-color: #065f46;">SUCCESS</span></td><td class="mono" style="text-align: right; color: #94a3b8;">2024-10-14 09:30</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function setNav(name) {
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.toggle('active', b.innerText.includes(name));
+      });
+    }
+
+    function setTab(tabName) {
+      ['cases', 'documents', 'correlations', 'audit'].forEach(t => {
+        document.getElementById('tab-' + t).style.display = (t === tabName ? 'block' : 'none');
+      });
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.innerText.toLowerCase().includes(tabName));
+      });
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').innerText = now.toTimeString().substring(0, 8);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+</body>
+</html>

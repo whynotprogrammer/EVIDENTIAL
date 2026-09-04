@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVIDENTIAL — Audit Trail Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: #f8fafc; color: #1e293b; padding: 24px; }
+    .container { max-width: 1280px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .title h1 { font-size: 24px; font-weight: 700; color: #0f172a; }
+    .title p { font-size: 14px; color: #64748b; margin-top: 4px; }
+    .chain-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 9999px; font-size: 13px; font-weight: 600; background-color: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .chain-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #10b981; }
+    .filter-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 24px; }
+    .filter-card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; font-weight: 700; }
+    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 12px; font-weight: 600; color: #475569; }
+    .filter-group input, .filter-group select { padding: 8px 12px; font-size: 14px; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; background: white; }
+    .filter-group input:focus, .filter-group select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+    .filter-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+    .btn { padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; transition: 0.15s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-outline { background: white; color: #475569; border: 1px solid #cbd5e1; }
+    .btn-outline:hover { background: #f8fafc; color: #0f172a; }
+    .table-container { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: #f8fafc; color: #475569; font-weight: 600; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    tr:hover td { background-color: #f8fafc; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge-login { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-case { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+    .badge-evidence { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .badge-ai { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .badge-doc { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .status-success { color: #059669; font-weight: 700; background: #d1fae5; padding: 2px 8px; border-radius: 9999px; }
+    .status-failure { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 2px 8px; border-radius: 9999px; }
+    .status-denied { color: #9f1239; font-weight: 700; background: #ffe4e6; padding: 2px 8px; border-radius: 9999px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); align-items: center; justify-content: center; z-index: 100; }
+    .modal-card { background: white; border-radius: 12px; width: 100%; max-width: 540px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; }
+    .close-btn { background: none; border: none; font-size: 18px; cursor: pointer; color: #64748b; }
+    pre { background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">
+        <h1>EVIDENTIAL — Audit Trail Dashboard</h1>
+        <p>Immutable application activity ledger with cryptographic hash verification.</p>
+      </div>
+      <div class="chain-badge">
+        <span class="chain-dot"></span>
+        Cryptographic Hash Chain: VERIFIED INTACT
+      </div>
+    </div>
+
+    <!-- Filter Component -->
+    <div class="filter-card">
+      <h2>Audit Filters</h2>
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="filterUser">User</label>
+          <input type="text" id="filterUser" placeholder="e.g. INV-101" />
+        </div>
+        <div class="filter-group">
+          <label for="filterAction">Action (13 Types)</label>
+          <select id="filterAction">
+            <option value="">All Actions</option>
+            <option value="LOGIN">LOGIN</option>
+            <option value="LOGOUT">LOGOUT</option>
+            <option value="CASE_CREATED">CASE_CREATED</option>
+            <option value="CASE_VIEWED">CASE_VIEWED</option>
+            <option value="DOCUMENT_UPLOADED">DOCUMENT_UPLOADED</option>
+            <option value="OCR_COMPLETED">OCR_COMPLETED</option>
+            <option value="TRANSLATION_CREATED">TRANSLATION_CREATED</option>
+            <option value="SEARCH_EXECUTED">SEARCH_EXECUTED</option>
+            <option value="CORRELATION_EXECUTED">CORRELATION_EXECUTED</option>
+            <option value="AI_QUERY">AI_QUERY</option>
+            <option value="EVIDENCE_ADDED">EVIDENCE_ADDED</option>
+            <option value="HASH_GENERATED">HASH_GENERATED</option>
+            <option value="EVIDENCE_VERIFIED">EVIDENCE_VERIFIED</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="filterDate">Date</label>
+          <input type="date" id="filterDate" />
+        </div>
+        <div class="filter-group">
+          <label for="filterResource">Resource</label>
+          <input type="text" id="filterResource" placeholder="Type or ID (e.g. CASE, EVID)" />
+        </div>
+        <div class="filter-group">
+          <label for="filterStatus">Status</label>
+          <select id="filterStatus">
+            <option value="">All Statuses</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILURE">FAILURE</option>
+            <option value="DENIED">DENIED</option>
+            <option value="WARNING">WARNING</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <span id="recordCount" style="font-size: 13px; color: #64748b;">Showing 0 events</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" id="resetBtn">Reset</button>
+          <button class="btn btn-primary" id="applyBtn">Apply Filters</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Events Table -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Audit ID</th>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Resource</th>
+            <th>Status</th>
+            <th>Chain Hash</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Populated by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 16px; font-weight: 700;">Audit Record Metadata</h3>
+        <button class="close-btn" id="closeModal">&times;</button>
+      </div>
+      <div id="modalContent" style="font-size: 13px; line-height: 1.6;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Initial seeded dataset representing all 13 canonical actions
+    const sampleEvents = [
+      { audit_id: "AUDIT-001-A", user_id: "INV-101", action: "LOGIN", resource_type: "AUTH", resource_id: "SESSION-992", timestamp: "2024-10-12T08:00:15Z", status: "SUCCESS", metadata: { ip: "10.0.4.12", client: "SecAgent/3.1" }, previous_hash: "0000000000000000000000000000000000000000", record_hash: "a3f8b91c4d2e" },
+      { audit_id: "AUDIT-002-B", user_id: "INV-101", action: "CASE_CREATED", resource_type: "CASE", resource_id: "CASE-2024-001", timestamp: "2024-10-12T08:05:00Z", status: "SUCCESS", metadata: { fir_number: "FIR-2024-088", station: "CyberCrime" }, previous_hash: "a3f8b91c4d2e", record_hash: "b5c7d82e1f4a" },
+      { audit_id: "AUDIT-003-C", user_id: "INV-102", action: "CASE_VIEWED", resource_type: "CASE", resource_id: "CASE-2024-001", timestamp: "2024-10-12T08:15:30Z", status: "SUCCESS", metadata: { clearance: "CONFIDENTIAL" }, previous_hash: "b5c7d82e1f4a", record_hash: "c6d8e93f2a5b" },
+      { audit_id: "AUDIT-004-D", user_id: "INV-101", action: "DOCUMENT_UPLOADED", resource_type: "DOCUMENT", resource_id: "DOC-FIR-001", timestamp: "2024-10-12T08:30:00Z", status: "SUCCESS", metadata: { filename: "fir_088.pdf", pages: 4 }, previous_hash: "c6d8e93f2a5b", record_hash: "d7e9f04a3b6c" },
+      { audit_id: "AUDIT-005-E", user_id: "SYSTEM", action: "OCR_COMPLETED", resource_type: "DOCUMENT", resource_id: "DOC-FIR-001", timestamp: "2024-10-12T08:31:12Z", status: "SUCCESS", metadata: { words_extracted: 1420, engine: "Tesseract-v5" }, previous_hash: "d7e9f04a3b6c", record_hash: "e8f0a15b4c7d" },
+      { audit_id: "AUDIT-006-F", user_id: "INV-101", action: "TRANSLATION_CREATED", resource_type: "DOCUMENT", resource_id: "DOC-WIT-002", timestamp: "2024-10-12T09:10:00Z", status: "SUCCESS", metadata: { from_lang: "hi", to_lang: "en" }, previous_hash: "e8f0a15b4c7d", record_hash: "f9a1b26c5d8e" },
+      { audit_id: "AUDIT-007-G", user_id: "INV-102", action: "SEARCH_EXECUTED", resource_type: "SEARCH", resource_id: "QUERY-0491", timestamp: "2024-10-12T09:45:20Z", status: "SUCCESS", metadata: { query: "Meridian Vault Gate B", matches: 4 }, previous_hash: "f9a1b26c5d8e", record_hash: "0a1b2c3d4e5f" },
+      { audit_id: "AUDIT-008-H", user_id: "INV-102", action: "CORRELATION_EXECUTED", resource_type: "CORRELATION", resource_id: "GRAPH-882", timestamp: "2024-10-12T10:15:00Z", status: "SUCCESS", metadata: { entities_linked: ["Vikram Malhotra", "FIR-2024-012"] }, previous_hash: "0a1b2c3d4e5f", record_hash: "1b2c3d4e5f6a" },
+      { audit_id: "AUDIT-009-I", user_id: "INV-101", action: "AI_QUERY", resource_type: "COPILOT", resource_id: "QUERY-8821", timestamp: "2024-10-12T11:00:00Z", status: "SUCCESS", metadata: { question: "Summarize this case.", grounded: true }, previous_hash: "1b2c3d4e5f6a", record_hash: "2c3d4e5f6a7b" },
+      { audit_id: "AUDIT-010-J", user_id: "INV-101", action: "EVIDENCE_ADDED", resource_type: "EVIDENCE", resource_id: "EVID-8819", timestamp: "2024-10-12T11:45:00Z", status: "SUCCESS", metadata: { item: "Kingston 128GB Flash Drive", custody_officer: "Roy" }, previous_hash: "2c3d4e5f6a7b", record_hash: "3d4e5f6a7b8c" },
+      { audit_id: "AUDIT-011-K", user_id: "SYSTEM", action: "HASH_GENERATED", resource_type: "EVIDENCE", resource_id: "EVID-8819", timestamp: "2024-10-12T11:45:05Z", status: "SUCCESS", metadata: { sha256: "3a9f4c8e...BC88192" }, previous_hash: "3d4e5f6a7b8c", record_hash: "4e5f6a7b8c9d" },
+      { audit_id: "AUDIT-012-L", user_id: "AUDITOR-01", action: "EVIDENCE_VERIFIED", resource_type: "EVIDENCE", resource_id: "EVID-8819", timestamp: "2024-10-12T14:20:00Z", status: "SUCCESS", metadata: { result: "VALID — INTEGRITY VERIFIED" }, previous_hash: "4e5f6a7b8c9d", record_hash: "5f6a7b8c9d0e" },
+      { audit_id: "AUDIT-013-M", user_id: "INV-101", action: "LOGOUT", resource_type: "AUTH", resource_id: "SESSION-992", timestamp: "2024-10-12T18:00:00Z", status: "SUCCESS", metadata: { duration_minutes: 600 }, previous_hash: "5f6a7b8c9d0e", record_hash: "6a7b8c9d0e1f" },
+      { audit_id: "AUDIT-014-N", user_id: "HACKER-GUEST", action: "CASE_VIEWED", resource_type: "CASE", resource_id: "CASE-2024-001", timestamp: "2024-10-12T19:30:00Z", status: "DENIED", metadata: { reason: "Unauthorized access attempt" }, previous_hash: "6a7b8c9d0e1f", record_hash: "7b8c9d0e1f2a" }
+    ];
+
+    function getActionBadge(action) {
+      let cls = "badge-case";
+      if (action.includes("LOGIN") || action.includes("LOGOUT")) cls = "badge-login";
+      else if (action.includes("EVIDENCE") || action.includes("HASH")) cls = "badge-evidence";
+      else if (action.includes("AI") || action.includes("SEARCH") || action.includes("CORRELATION")) cls = "badge-ai";
+      else if (action.includes("DOCUMENT") || action.includes("OCR") || action.includes("TRANSLATION")) cls = "badge-doc";
+      return `<span class="badge ${cls}">${action}</span>`;
+    }
+
+    function getStatusBadge(status) {
+      if (status === "SUCCESS") return `<span class="status-success">SUCCESS</span>`;
+      if (status === "DENIED") return `<span class="status-denied">DENIED</span>`;
+      return `<span class="status-failure">${status}</span>`;
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px; color: #64748b;">No audit records match the selected filters.</td></tr>`;
+        document.getElementById("recordCount").innerText = "Showing 0 events";
+        return;
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="mono" style="color: #64748b;">${item.audit_id}</td>
+          <td style="color: #64748b;">${item.timestamp.replace("T", " ").replace("Z", "")}</td>
+          <td style="font-weight: 600;">${item.user_id}</td>
+          <td>${getActionBadge(item.action)}</td>
+          <td><span style="font-weight: 600; color: #475569;">${item.resource_type}:</span> ${item.resource_id}</td>
+          <td>${getStatusBadge(item.status)}</td>
+          <td class="mono" style="color: #94a3b8;" title="${item.record_hash}">${item.record_hash ? item.record_hash.substring(0, 8) + '...' : ''}</td>
+          <td style="text-align: right;">
+            <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick='showDetails(${JSON.stringify(item)})'>View</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("recordCount").innerText = `Showing ${data.length} events`;
+    }
+
+    function filterData() {
+      const user = document.getElementById("filterUser").value.trim().toLowerCase();
+      const action = document.getElementById("filterAction").value;
+      const date = document.getElementById("filterDate").value;
+      const resource = document.getElementById("filterResource").value.trim().toLowerCase();
+      const status = document.getElementById("filterStatus").value;
+
+      const filtered = sampleEvents.filter(item => {
+        if (user && !item.user_id.toLowerCase().includes(user)) return false;
+        if (action && item.action !== action) return false;
+        if (date && !item.timestamp.startsWith(date)) return false;
+        if (resource && !item.resource_type.toLowerCase().includes(resource) && !item.resource_id.toLowerCase().includes(resource)) return false;
+        if (status && item.status !== status) return false;
+        return true;
+      });
+
+      renderTable(filtered);
+    }
+
+    function resetFilters() {
+      document.getElementById("filterUser").value = "";
+      document.getElementById("filterAction").value = "";
+      document.getElementById("filterDate").value = "";
+      document.getElementById("filterResource").value = "";
+      document.getElementById("filterStatus").value = "";
+      renderTable(sampleEvents);
+    }
+
+    function showDetails(item) {
+      const content = `
+        <p><strong>Audit ID:</strong> <span class="mono">${item.audit_id}</span></p>
+        <p><strong>User ID:</strong> ${item.user_id}</p>
+        <p><strong>Action:</strong> ${item.action}</p>
+        <p><strong>Resource:</strong> ${item.resource_type} / ${item.resource_id}</p>
+        <p><strong>Timestamp:</strong> ${item.timestamp}</p>
+        <p><strong>Status:</strong> ${item.status}</p>
+        <p><strong>Previous Hash:</strong> <span class="mono" style="word-break: break-all;">${item.previous_hash}</span></p>
+        <p><strong>Record Hash:</strong> <span class="mono" style="word-break: break-all;">${item.record_hash}</span></p>
+        <p style="margin-top: 10px;"><strong>Metadata:</strong></p>
+        <pre>${JSON.stringify(item.metadata, null, 2)}</pre>
+      `;
+      document.getElementById("modalContent").innerHTML = content;
+      document.getElementById("modalBackdrop").style.display = "flex";
+    }
+
+    document.getElementById("applyBtn").addEventListener("click", filterData);
+    document.getElementById("resetBtn").addEventListener("click", resetFilters);
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("modalBackdrop").style.display = "none";
+    });
+    document.getElementById("modalBackdrop").addEventListener("click", (e) => {
+      if (e.target.id === "modalBackdrop") {
+        document.getElementById("modalBackdrop").style.display = "none";
+      }
+    });
+
+    // Initial render
+    renderTable(sampleEvents);
+  </script>
+</body>
+</html>
