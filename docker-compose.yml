@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  # ============================================================
+  # Database Service (PostgreSQL with pgvector support)
+  # ============================================================
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: evidential_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-evidential}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-evidential_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-evidential_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-evidential} -d ${POSTGRES_DB:-evidential_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # Backend API Service (FastAPI)
+  # ============================================================
+  backend:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.backend
+    container_name: evidential_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-evidential}:${POSTGRES_PASSWORD:-evidential_secret_password}@db:5432/${POSTGRES_DB:-evidential_db}
+      - APP_ENV=production
+      - API_V1_STR=/api/v1
+      - SECRET_KEY=${SECRET_KEY:-evidential-super-secure-jwt-secret-key-change-in-production-2026!}
+      - STORAGE_DIR=/app/storage
+    ports:
+      - "8000:8000"
+    volumes:
+      - storage_data:/app/storage
+
+  # ============================================================
+  # Frontend Web Service (Next.js)
+  # ============================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: evidential_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+    name: evidential_postgres_data
+  storage_data:
+    name: evidential_storage_data
