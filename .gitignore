@@ -1,0 +1,56 @@
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# =========================
+# Node / Next.js
+# =========================
+node_modules/
+.next/
+out/
+
+# =========================
+# VS Code / IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs & Cache
+# =========================
+*.log
+.pytest_cache/
+.coverage
+
+# =========================
+# Uploaded Evidence
+# =========================
+storage/uploads/*
+storage/evidence/*
+storage/ocr/*
+storage/generated/*
+
+# =========================
+# Private Keys / Certificates
+# =========================
+*.pem
+*.key
+*.crt
