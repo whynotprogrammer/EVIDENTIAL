@@ -118,55 +118,60 @@ export const AuditDashboard: React.FC = () => {
       case "EVIDENCE_VERIFIED":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
       case "AI_QUERY":
-      case "SEARCH_EXECUTED":
-      case "CORRELATION_EXECUTED":
-        return "bg-purple-100 text-purple-800 border-purple-200";
+        return "bg-zinc-900 text-white border-zinc-700";
       case "DOCUMENT_UPLOADED":
       case "OCR_COMPLETED":
       case "TRANSLATION_CREATED":
-        return "bg-amber-100 text-amber-800 border-amber-200";
+        return "bg-zinc-900 text-accent border-hairline";
+      case "SEARCH_EXECUTED":
+      case "CORRELATION_EXECUTED":
+      case "AI_QUERY":
+        return "bg-zinc-900 text-zinc-300 border-hairline";
+      case "HASH_GENERATED":
+      case "EVIDENCE_VERIFIED":
+        return "bg-emerald-950/40 text-emerald-400 border-emerald-900/50";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-zinc-900 text-zinc-400 border-hairline";
     }
   };
 
   const getStatusBadge = (status: AuditStatus) => {
     switch (status) {
       case "SUCCESS":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">SUCCESS</span>;
+        return <span className="px-1.5 py-0.5 text-[10px] font-mono uppercase rounded-sm bg-emerald-950/40 text-emerald-400 border border-emerald-900/50">SUCCESS</span>;
       case "FAILURE":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">FAILURE</span>;
+        return <span className="px-1.5 py-0.5 text-[10px] font-mono uppercase rounded-sm bg-red-950/40 text-red-400 border border-red-900/50">FAILURE</span>;
       case "DENIED":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-100 text-rose-800">DENIED</span>;
+        return <span className="px-1.5 py-0.5 text-[10px] font-mono uppercase rounded-sm bg-red-950/40 text-red-400 border border-red-900/50">DENIED</span>;
       case "WARNING":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">WARNING</span>;
+        return <span className="px-1.5 py-0.5 text-[10px] font-mono uppercase rounded-sm bg-amber-950/40 text-amber-400 border border-amber-900/50">WARNING</span>;
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto font-sans bg-gray-50 min-h-screen">
+    <div className="p-6 max-w-7xl mx-auto font-sans bg-black text-ink min-h-screen space-y-6">
       {/* Header & Cryptographic Status */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-gray-200 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-5 border-b border-hairline gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">EVIDENTIAL Audit Trail Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Immutable application activity ledger with cryptographic hash verification.
+          <h1 className="text-xl font-semibold text-white tracking-tight">Audit Trail & Chain Ledger</h1>
+          <p className="text-xs text-mute mt-1">
+            Cryptographic SHA-256 hash-chained application activity records.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${
+            className={`flex items-center gap-2 px-2.5 py-1 rounded-sm text-xs font-mono border ${
               chainValid
-                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                : "bg-red-50 text-red-800 border-red-300"
+                ? "bg-zinc-900 text-emerald-400 border-hairline"
+                : "bg-red-950/40 text-red-400 border-red-900/50"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${chainValid ? "bg-emerald-500" : "bg-red-500"}`} />
-            {chainValid ? "Cryptographic Chain Verified" : "Chain Integrity Tampered"}
+            <span className={`w-1.5 h-1.5 rounded-full ${chainValid ? "bg-emerald-400" : "bg-red-500"}`} />
+            {chainValid ? "Hash Chain Verified" : "Chain Integrity Tampered"}
           </div>
           <button
             onClick={fetchAuditData}
-            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition"
+            className="px-3 py-1 bg-white hover:bg-zinc-200 text-black text-xs font-medium rounded-sm transition"
           >
             Refresh
           </button>
@@ -174,28 +179,28 @@ export const AuditDashboard: React.FC = () => {
       </div>
 
       {/* Multi-Criteria Filter Bar */}
-      <div className="mt-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">Filter Records</h2>
+      <div className="bg-canvas-elevated p-4 rounded-md border border-hairline">
+        <h2 className="text-[11px] font-mono uppercase text-mute mb-3">Filter Records</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
           {/* User Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">User</label>
+            <label className="block text-[11px] font-mono text-mute mb-1">User ID</label>
             <input
               type="text"
               placeholder="e.g. INV-101"
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full text-xs px-3 py-1.5 bg-zinc-950 border border-hairline text-white rounded-sm placeholder-zinc-600 focus:border-zinc-500 focus:outline-none font-mono"
             />
           </div>
 
           {/* Action Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Action</label>
+            <label className="block text-[11px] font-mono text-mute mb-1">Action</label>
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+              className="w-full text-xs px-2.5 py-1.5 bg-zinc-950 border border-hairline text-white rounded-sm focus:border-zinc-500 focus:outline-none"
             >
               <option value="">All Actions (13)</option>
               {ALL_ACTIONS.map((act) => (
@@ -208,36 +213,36 @@ export const AuditDashboard: React.FC = () => {
 
           {/* Date Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+            <label className="block text-[11px] font-mono text-mute mb-1">Date</label>
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full text-xs px-3 py-1.5 bg-zinc-950 border border-hairline text-white rounded-sm focus:border-zinc-500 focus:outline-none"
             />
           </div>
 
           {/* Resource Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Resource</label>
+            <label className="block text-[11px] font-mono text-mute mb-1">Resource ID</label>
             <input
               type="text"
-              placeholder="Type or ID (e.g. CASE, EVID)"
+              placeholder="e.g. CASE-2026-001"
               value={resourceFilter}
               onChange={(e) => setResourceFilter(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full text-xs px-3 py-1.5 bg-zinc-950 border border-hairline text-white rounded-sm placeholder-zinc-600 focus:border-zinc-500 focus:outline-none font-mono"
             />
           </div>
 
           {/* Status Filter */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <label className="block text-[11px] font-mono text-mute mb-1">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+              className="w-full text-xs px-2.5 py-1.5 bg-zinc-950 border border-hairline text-white rounded-sm focus:border-zinc-500 focus:outline-none"
             >
-              <option value="">All Statuses</option>
+              <option value="">All Statuses (4)</option>
               {ALL_STATUSES.map((st) => (
                 <option key={st} value={st}>
                   {st}
@@ -247,68 +252,63 @@ export const AuditDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Action Buttons */}
-        <div className="mt-3 flex items-center justify-between pt-2 border-t border-gray-100">
-          <span className="text-xs text-gray-500">
-            Showing {records.length} matching events
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={clearFilters}
-              className="px-3 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-100 transition"
-            >
-              Reset Filters
-            </button>
-            <button
-              onClick={fetchAuditData}
-              className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            >
-              Apply
-            </button>
-          </div>
+        {/* Clear Filters */}
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={() => {
+              setUserFilter("");
+              setActionFilter("");
+              setDateFilter("");
+              setResourceFilter("");
+              setStatusFilter("");
+            }}
+            className="text-xs text-mute hover:text-white transition underline font-mono"
+          >
+            Clear All Filters
+          </button>
         </div>
       </div>
 
       {/* Audit Log Table */}
-      <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-canvas-elevated rounded-md border border-hairline overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-left text-sm">
-            <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-hairline text-left text-xs">
+            <thead className="bg-canvas-subtle text-[11px] font-mono uppercase text-mute">
               <tr>
-                <th className="px-4 py-3">Audit ID</th>
-                <th className="px-4 py-3">Timestamp</th>
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Action</th>
-                <th className="px-4 py-3">Resource</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Chain Hash</th>
-                <th className="px-4 py-3 text-right">Details</th>
+                <th className="px-4 py-2.5">Audit ID</th>
+                <th className="px-4 py-2.5">Timestamp</th>
+                <th className="px-4 py-2.5">User</th>
+                <th className="px-4 py-2.5">Action</th>
+                <th className="px-4 py-2.5">Resource</th>
+                <th className="px-4 py-2.5">Status</th>
+                <th className="px-4 py-2.5">Chain Hash</th>
+                <th className="px-4 py-2.5 text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-hairline">
               {records.map((rec) => (
-                <tr key={rec.audit_id} className="hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600">{rec.audit_id}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                <tr key={rec.audit_id} className="hover:bg-zinc-900/50 transition">
+                  <td className="px-4 py-2.5 font-mono text-xs text-mute">{rec.audit_id}</td>
+                  <td className="px-4 py-2.5 text-xs text-mute whitespace-nowrap font-mono">
                     {rec.timestamp.replace("T", " ").substring(0, 19)}
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{rec.user_id}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded border ${getActionColor(rec.action)}`}>
+                  <td className="px-4 py-2.5 font-medium text-white">{rec.user_id}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`px-1.5 py-0.5 text-[10px] font-mono rounded-sm border ${getActionColor(rec.action)}`}>
                       {rec.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-700">
-                    <span className="font-semibold text-gray-600">{rec.resource_type}:</span> {rec.resource_id}
+                  <td className="px-4 py-2.5 text-xs text-zinc-300">
+                    <span className="font-mono text-mute">{rec.resource_type}:</span> {rec.resource_id}
                   </td>
-                  <td className="px-4 py-3">{getStatusBadge(rec.status)}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-400" title={rec.record_hash}>
+                  <td className="px-4 py-2.5">{getStatusBadge(rec.status)}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-mute" title={rec.record_hash}>
                     {rec.record_hash ? rec.record_hash.substring(0, 8) + "..." : "N/A"}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-2.5 text-right">
                     <button
                       onClick={() => setSelectedRecord(rec)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-xs text-accent hover:underline font-medium"
                     >
                       View
                     </button>
@@ -317,7 +317,7 @@ export const AuditDashboard: React.FC = () => {
               ))}
               {records.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-4 py-8 text-center text-xs text-mute">
                     No audit records matching the specified filters.
                   </td>
                 </tr>
@@ -329,55 +329,55 @@ export const AuditDashboard: React.FC = () => {
 
       {/* Selected Record Metadata Modal */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 border border-gray-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-              <h3 className="text-base font-bold text-gray-900">Audit Record Details</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-canvas-elevated rounded-md max-w-lg w-full p-6 border border-hairline text-ink">
+            <div className="flex items-center justify-between pb-3 border-b border-hairline">
+              <h3 className="text-sm font-semibold text-white">Audit Record Payload</h3>
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+                className="text-mute hover:text-white text-xs font-mono"
               >
                 ✕
               </button>
             </div>
-            <div className="mt-4 space-y-2 text-sm">
+            <div className="mt-4 space-y-2 text-xs">
               <div>
-                <span className="text-xs text-gray-500">Audit ID:</span>
-                <p className="font-mono text-xs font-semibold text-gray-800">{selectedRecord.audit_id}</p>
+                <span className="text-[11px] font-mono text-mute">Audit ID:</span>
+                <p className="font-mono text-xs font-semibold text-white">{selectedRecord.audit_id}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-xs text-gray-500">User ID:</span>
-                  <p className="font-semibold text-gray-800">{selectedRecord.user_id}</p>
+                  <span className="text-[11px] font-mono text-mute">User ID:</span>
+                  <p className="font-medium text-white">{selectedRecord.user_id}</p>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Action:</span>
-                  <p className="font-semibold text-gray-800">{selectedRecord.action}</p>
+                  <span className="text-[11px] font-mono text-mute">Action:</span>
+                  <p className="font-medium text-white">{selectedRecord.action}</p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <span className="text-xs text-gray-500">Resource:</span>
-                  <p className="text-xs text-gray-800 font-mono">
+                  <span className="text-[11px] font-mono text-mute">Resource:</span>
+                  <p className="text-xs text-zinc-300 font-mono">
                     {selectedRecord.resource_type} / {selectedRecord.resource_id}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500">Timestamp:</span>
-                  <p className="text-xs text-gray-800">{selectedRecord.timestamp}</p>
+                  <span className="text-[11px] font-mono text-mute">Timestamp:</span>
+                  <p className="text-xs text-zinc-300 font-mono">{selectedRecord.timestamp}</p>
                 </div>
               </div>
               <div>
-                <span className="text-xs text-gray-500">Previous Chain Hash:</span>
-                <p className="font-mono text-xs text-gray-600 break-all">{selectedRecord.previous_hash}</p>
+                <span className="text-[11px] font-mono text-mute">Previous Chain Hash:</span>
+                <p className="font-mono text-[11px] text-mute break-all bg-black p-2 rounded-sm border border-hairline">{selectedRecord.previous_hash}</p>
               </div>
               <div>
-                <span className="text-xs text-gray-500">Record Hash:</span>
-                <p className="font-mono text-xs text-gray-600 break-all">{selectedRecord.record_hash}</p>
+                <span className="text-[11px] font-mono text-mute">Record Hash:</span>
+                <p className="font-mono text-[11px] text-mute break-all bg-black p-2 rounded-sm border border-hairline">{selectedRecord.record_hash}</p>
               </div>
               <div>
-                <span className="text-xs text-gray-500">Metadata Payload:</span>
-                <pre className="bg-gray-100 p-2.5 rounded text-xs overflow-x-auto text-gray-800">
+                <span className="text-[11px] font-mono text-mute">Metadata Payload:</span>
+                <pre className="bg-black p-2.5 rounded-sm text-[11px] font-mono overflow-x-auto text-zinc-300 border border-hairline">
                   {JSON.stringify(selectedRecord.metadata, null, 2)}
                 </pre>
               </div>
@@ -385,7 +385,7 @@ export const AuditDashboard: React.FC = () => {
             <div className="mt-5 text-right">
               <button
                 onClick={() => setSelectedRecord(null)}
-                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-semibold rounded"
+                className="px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium rounded-sm border border-hairline transition"
               >
                 Close
               </button>

@@ -77,20 +77,20 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-black text-ink">
       <Navbar user={user} onNewCase={() => setIsCreateOpen(true)} onLogout={() => setUser(null)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Welcome & Quick Action Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-hairline pb-5">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-white">
               Investigation Command Center
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-mute">
               {user
-                ? `Logged in as ${user.full_name} (${user.role}) — Badge: ${user.badge_number || "OFFICER"}`
-                : "Welcome to EVIDENTIAL. Please log in or select a demo identity to begin."}
+                ? `Active Session: ${user.full_name} (${user.role}) — Badge: ${user.badge_number || "OFFICER"}`
+                : "Secure forensic intelligence environment. Select identity to begin."}
             </p>
           </div>
 
@@ -100,26 +100,26 @@ export default function DashboardPage() {
                 <button
                   onClick={() => handleQuickLogin("officer")}
                   disabled={loginLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-slate-700"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-hairline transition"
                 >
-                  <User className="w-3.5 h-3.5 text-blue-400" />
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
                   Demo Investigator
                 </button>
                 <button
                   onClick={() => handleQuickLogin("admin")}
                   disabled={loginLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/80 hover:bg-blue-900 border border-blue-800 text-blue-300 text-xs font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-zinc-900 hover:bg-zinc-800 border border-hairline text-zinc-200 text-xs font-medium transition"
                 >
-                  <Lock className="w-3.5 h-3.5 text-blue-400" />
+                  <Lock className="w-3.5 h-3.5 text-zinc-400" />
                   Demo Chief Admin
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-lg shadow-blue-600/20"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black text-xs font-medium transition-colors"
               >
-                <PlusCircle className="w-4 h-4" />
+                <PlusCircle className="w-3.5 h-3.5" />
                 Register New Case
               </button>
             )}
@@ -128,92 +128,92 @@ export default function DashboardPage() {
 
         {/* KPI Metrics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
+          <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
+            <div className="flex items-center justify-between text-mute">
               <span className="text-xs font-medium">Total Cases</span>
-              <FolderGit2 className="w-4 h-4 text-blue-400" />
+              <FolderGit2 className="w-3.5 h-3.5 text-zinc-400" />
             </div>
-            <div className="text-2xl font-black text-white">
+            <div className="text-2xl font-semibold text-white">
               {stats?.metrics.total_cases ?? recentCases.length}
             </div>
-            <p className="text-[11px] text-slate-500 font-mono">Registry Records</p>
+            <p className="text-[11px] text-mute font-mono">Registry Records</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
+          <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
+            <div className="flex items-center justify-between text-mute">
               <span className="text-xs font-medium">Active Investigations</span>
-              <Activity className="w-4 h-4 text-amber-400" />
+              <Activity className="w-3.5 h-3.5 text-amber-400" />
             </div>
-            <div className="text-2xl font-black text-amber-400">
+            <div className="text-2xl font-semibold text-amber-400">
               {stats?.metrics.active_investigations ?? recentCases.filter((c) => c.status !== "CLOSED").length}
             </div>
-            <p className="text-[11px] text-slate-500 font-mono">Under Active Probe</p>
+            <p className="text-[11px] text-mute font-mono">Under Active Probe</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
+          <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
+            <div className="flex items-center justify-between text-mute">
               <span className="text-xs font-medium">Resolved Cases</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
-            <div className="text-2xl font-black text-emerald-400">
+            <div className="text-2xl font-semibold text-emerald-400">
               {recentCases.filter((c) => c.status === "CLOSED").length}
             </div>
-            <p className="text-[11px] text-slate-500 font-mono">Closed & Archived</p>
+            <p className="text-[11px] text-mute font-mono">Closed & Archived</p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="text-xs font-medium">System Status</span>
-              <Shield className="w-4 h-4 text-blue-400" />
+          <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
+            <div className="flex items-center justify-between text-mute">
+              <span className="text-xs font-medium">System Telemetry</span>
+              <Shield className="w-3.5 h-3.5 text-zinc-400" />
             </div>
-            <div className="text-2xl font-black text-blue-400">Phase 3</div>
-            <p className="text-[11px] text-slate-500 font-mono">Case Mgmt Active</p>
+            <div className="text-2xl font-semibold text-white">Operational</div>
+            <p className="text-[11px] text-mute font-mono">All Nodes Online</p>
           </div>
         </div>
 
         {/* Recent Cases & Crime Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Cases Column */}
-          <div className="lg:col-span-2 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h2 className="text-sm font-bold text-white flex items-center gap-2">
-                <FolderGit2 className="w-4 h-4 text-blue-400" />
-                Recent Investigation Cases
+          <div className="lg:col-span-2 bg-canvas-elevated border border-hairline rounded-md p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-hairline pb-3">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <FolderGit2 className="w-4 h-4 text-zinc-400" />
+                Recent Cases
               </h2>
               <Link
                 href="/cases"
-                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium"
+                className="text-xs text-mute hover:text-white flex items-center gap-1 font-medium transition"
               >
-                View All <ArrowRight className="w-3.5 h-3.5" />
+                View All <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
             {loading ? (
-              <div className="py-12 flex justify-center text-slate-500">
-                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+              <div className="py-12 flex justify-center text-mute">
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
               </div>
             ) : recentCases.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">
+              <div className="py-8 text-center text-xs text-mute">
                 No cases registered yet. Click &quot;Register New Case&quot; above.
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {recentCases.map((c) => (
                   <Link
                     key={c.id}
                     href={`/cases/${c.id}`}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800/80 hover:border-blue-500/30 transition text-xs"
+                    className="flex items-center justify-between p-3 rounded-sm bg-canvas-subtle hover:bg-zinc-900/80 border border-hairline hover:border-zinc-700 transition text-xs"
                   >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-blue-400">{c.case_number}</span>
-                        <span className="font-semibold text-slate-200">{c.title}</span>
+                        <span className="font-mono font-semibold text-accent">{c.case_number}</span>
+                        <span className="font-medium text-white">{c.title}</span>
                       </div>
-                      <p className="text-[11px] text-slate-400">{c.crime_type} • {c.location || "Jurisdiction Wide"}</p>
+                      <p className="text-[11px] text-mute">{c.crime_type} • {c.location || "Jurisdiction Wide"}</p>
                     </div>
 
                     <div className="text-right">
-                      <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm bg-zinc-900 text-zinc-300 border border-hairline">
                         {c.status.replace("_", " ")}
                       </span>
                     </div>
@@ -224,9 +224,9 @@ export default function DashboardPage() {
           </div>
 
           {/* Crime Breakdown Column */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-              <TrendingUp className="w-4 h-4 text-purple-400" />
+          <div className="bg-canvas-elevated border border-hairline rounded-md p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2 border-b border-hairline pb-3">
+              <TrendingUp className="w-4 h-4 text-zinc-400" />
               Crime Breakdown
             </h2>
 
@@ -234,13 +234,13 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 {stats.cases_by_crime_type.map((item, idx) => (
                   <div key={idx} className="space-y-1 text-xs">
-                    <div className="flex justify-between text-slate-300">
+                    <div className="flex justify-between text-zinc-300">
                       <span className="truncate">{item.name}</span>
-                      <span className="font-mono text-slate-400">{item.count}</span>
+                      <span className="font-mono text-mute">{item.count}</span>
                     </div>
-                    <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                    <div className="w-full bg-zinc-900 rounded-full h-1 overflow-hidden">
                       <div
-                        className="bg-blue-500 h-full rounded-full"
+                        className="bg-white h-full rounded-full"
                         style={{
                           width: `${Math.min(100, (item.count / (stats.metrics.total_cases || 1)) * 100)}%`,
                         }}
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-xs text-slate-500">
+              <div className="py-8 text-center text-xs text-mute">
                 Data will appear as cases are registered.
               </div>
             )}

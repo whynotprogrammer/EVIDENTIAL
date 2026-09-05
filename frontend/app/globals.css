@@ -3,13 +3,37 @@
 @tailwind utilities;
 
 :root {
-  --background: #0b0f19;
-  --foreground: #f8fafc;
+  --background: #000000;
+  --foreground: #ededed;
+  --canvas: #000000;
+  --canvas-subtle: #0a0a0a;
+  --canvas-elevated: #121212;
+  --ink: #ededed;
+  --body: #a1a1a1;
+  --mute: #737373;
+  --faint: #404040;
+  --hairline: #262626;
+  --hairline-soft: #1f1f1f;
+  --hairline-strong: #333333;
+  --card: #0a0a0a;
+  --card-foreground: #ededed;
+  --border: #262626;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #171717;
+  --secondary-foreground: #ededed;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  background-color: #000000;
+  color: #ededed;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: #0070f3;
+  color: #ffffff;
 }

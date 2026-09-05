@@ -109,87 +109,85 @@ export default function SearchPage() {
     switch (type) {
       case "CASE":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-950/70 border border-blue-800 text-blue-300 font-mono">
-            <FolderGit2 className="w-3 h-3" /> CASE RECORD
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono uppercase bg-zinc-900 border border-hairline text-zinc-300">
+            <FolderGit2 className="w-3 h-3 text-zinc-400" />
+            CASE
           </span>
         );
       case "DOCUMENT":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-950/70 border border-purple-800 text-purple-300 font-mono">
-            <FileText className="w-3 h-3" /> DOCUMENT EVIDENCE
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono uppercase bg-zinc-900 border border-hairline text-zinc-300">
+            <FileText className="w-3 h-3 text-zinc-400" />
+            DOCUMENT
           </span>
         );
       case "ENTITY":
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-950/70 border border-emerald-800 text-emerald-300 font-mono">
-            <Tag className="w-3 h-3" /> EXTRACTED ENTITY
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono uppercase bg-zinc-900 border border-hairline text-zinc-300">
+            <Tag className="w-3 h-3 text-zinc-400" />
+            ENTITY
           </span>
         );
       default:
-        return null;
+        return (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-mono uppercase bg-zinc-900 border border-hairline text-zinc-400">
+            RECORD
+          </span>
+        );
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-black text-ink">
       <Navbar user={user} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header banner */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-1.5 rounded-lg bg-blue-600/20 border border-blue-500/30 text-blue-400">
-                <Search className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl font-bold tracking-tight text-white">
-                Investigation Search
-              </h1>
-            </div>
-            <p className="text-xs text-slate-400">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-hairline pb-5">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-white tracking-tight flex items-center gap-2">
+              <Search className="w-5 h-5 text-zinc-400" />
+              Cross-Investigation Search
+            </h1>
+            <p className="text-xs text-mute">
               Multi-dimensional cross-evidence search across authorized cases, OCR transcripts, and extracted entities.
             </p>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/30 border border-emerald-800/50 text-emerald-400 text-xs font-mono">
-            <Lock className="w-3.5 h-3.5" />
-            <span>Pre-Retrieval Authorization Enforced</span>
           </div>
         </div>
 
         {/* Search Query Form */}
-        <form onSubmit={handleSearch} className="mb-8 space-y-4">
+        <form onSubmit={handleSearch} className="mb-6 space-y-3">
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500">
-              <Search className="w-5 h-5" />
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-mute">
+              <Search className="w-4 h-4" />
             </div>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search suspect name, phone number, vehicle plate, keyword, or evidence text..."
-              className="w-full pl-12 pr-28 py-3.5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500/80 transition"
+              className="w-full pl-10 pr-24 py-2.5 bg-canvas-elevated border border-hairline rounded-md text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition"
             />
             <button
               type="submit"
               disabled={loading}
-              className="absolute right-2 top-2 bottom-2 px-5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg shadow-lg shadow-blue-600/20 transition flex items-center gap-1.5"
+              className="absolute right-1.5 top-1.5 bottom-1.5 px-3.5 bg-white hover:bg-zinc-200 disabled:opacity-50 text-black text-xs font-medium rounded-sm transition flex items-center gap-1.5"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
               <span>Search</span>
             </button>
           </div>
 
           {/* Filter Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-slate-900/40 border border-slate-800/60 rounded-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-canvas-elevated border border-hairline rounded-md">
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                ENTITY TYPE
+              <label className="block text-[10px] font-mono uppercase text-mute mb-1">
+                Entity Type
               </label>
               <select
                 value={entityType}
                 onChange={(e) => setEntityType(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none"
               >
                 {ENTITY_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -200,13 +198,13 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                CRIME CLASSIFICATION
+              <label className="block text-[10px] font-mono uppercase text-mute mb-1">
+                Crime Classification
               </label>
               <select
                 value={crimeType}
                 onChange={(e) => setCrimeType(e.target.value)}
-                className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-zinc-200 focus:border-zinc-500 focus:outline-none"
               >
                 {CRIME_TYPES.map((c) => (
                   <option key={c} value={c}>
@@ -217,15 +215,15 @@ export default function SearchPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-mono text-slate-400 mb-1">
-                LOCATION / POLICE JURISDICTION
+              <label className="block text-[10px] font-mono uppercase text-mute mb-1">
+                Location / Jurisdiction
               </label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Connaught Place, Mumbai..."
-                className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500"
+                className="w-full px-2.5 py-1.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-white placeholder-zinc-600 focus:border-zinc-500 focus:outline-none"
               />
             </div>
           </div>
@@ -233,19 +231,19 @@ export default function SearchPage() {
 
         {/* Error message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-950/40 border border-red-800/50 rounded-xl flex items-center gap-3 text-red-300 text-xs">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mb-6 p-3 bg-red-950/30 border border-red-900/50 rounded-sm flex items-center gap-2.5 text-red-300 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Results summary */}
         {hasSearched && searchResponse && (
-          <div className="mb-4 flex items-center justify-between text-xs text-slate-400 font-mono">
+          <div className="mb-4 flex items-center justify-between text-xs text-mute font-mono">
             <span>
-              Found <strong className="text-white">{searchResponse.total}</strong> authorized result(s)
+              Found <strong className="text-white">{searchResponse.total}</strong> authorized record(s)
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded-sm bg-zinc-900 border border-hairline text-zinc-400">
               Mode: {searchResponse.search_mode}
             </span>
           </div>
@@ -253,27 +251,27 @@ export default function SearchPage() {
 
         {/* Results list */}
         {results.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {results.map((item, idx) => (
               <div
                 key={idx}
-                className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl hover:border-slate-700 transition"
+                className="p-3.5 bg-canvas-elevated border border-hairline rounded-md hover:border-zinc-700 transition"
               >
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="flex items-center gap-2">
                     {getResultTypeBadge(item.result_type)}
-                    <span className="text-xs font-mono text-blue-400">
+                    <span className="text-xs font-mono font-medium text-accent">
                       {item.case_number}
                     </span>
-                    <span className="text-slate-500">•</span>
-                    <span className="text-xs font-semibold text-white">
+                    <span className="text-zinc-600">•</span>
+                    <span className="text-xs font-medium text-white">
                       {item.case_title}
                     </span>
                   </div>
 
                   <Link
                     href={`/cases/${item.case_id}`}
-                    className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium shrink-0"
+                    className="flex items-center gap-1 text-xs text-mute hover:text-white font-medium shrink-0 transition"
                   >
                     <span>View Case</span>
                     <ExternalLink className="w-3 h-3" />
@@ -281,12 +279,12 @@ export default function SearchPage() {
                 </div>
 
                 {/* Match snippet */}
-                <div className="mt-2 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-slate-800/60 font-mono">
-                  <span className="text-slate-500 text-[10px] block uppercase mb-1">
+                <div className="mt-2 text-xs text-zinc-300 bg-zinc-950 p-2.5 rounded-sm border border-hairline font-mono">
+                  <span className="text-mute text-[10px] block uppercase mb-1">
                     Matched on: {item.match_field}
                     {item.entity_type && ` • [${item.entity_type}]`}
                   </span>
-                  <p className="leading-relaxed">
+                  <p className="leading-relaxed text-zinc-200">
                     {item.match_snippet}
                   </p>
                 </div>
@@ -294,19 +292,19 @@ export default function SearchPage() {
             ))}
           </div>
         ) : hasSearched && !loading ? (
-          <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
-            <Shield className="w-12 h-12 mx-auto text-slate-600 mb-3" />
-            <h3 className="text-base font-semibold text-slate-200 mb-1">
+          <div className="text-center py-16 border border-hairline rounded-md bg-canvas-elevated">
+            <Shield className="w-8 h-8 mx-auto text-zinc-600 mb-2" />
+            <h3 className="text-sm font-semibold text-white mb-1">
               No Authorized Records Found
             </h3>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
+            <p className="text-xs text-mute max-w-md mx-auto">
               Either no records matched your query parameters or your officer credentials do not have access to matching cases.
             </p>
           </div>
         ) : !hasSearched && (
-          <div className="text-center py-16 border border-slate-900 rounded-2xl bg-slate-900/10">
-            <Search className="w-10 h-10 mx-auto text-slate-600 mb-2" />
-            <p className="text-xs text-slate-400">
+          <div className="text-center py-16 border border-hairline rounded-md bg-canvas-elevated">
+            <Search className="w-8 h-8 mx-auto text-zinc-600 mb-2" />
+            <p className="text-xs text-mute">
               Enter keywords, phone numbers, vehicle registrations, or suspect names to search across authorized cases.
             </p>
           </div>

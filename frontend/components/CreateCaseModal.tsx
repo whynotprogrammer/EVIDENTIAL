@@ -53,23 +53,23 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="bg-canvas-elevated border border-hairline rounded-md max-w-2xl w-full p-6 overflow-y-auto max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-hairline pb-4 mb-5">
           <div>
-            <h2 className="text-lg font-bold text-white">Register Investigation Case</h2>
-            <p className="text-xs text-slate-400">Initialize a new FIR record into the secure case registry</p>
+            <h2 className="text-base font-semibold text-white">Register Investigation Case</h2>
+            <p className="text-xs text-mute">Initialize a new FIR record into the secure case registry</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            className="p-1 rounded-sm hover:bg-zinc-900 text-zinc-400 hover:text-white transition"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-950/40 border border-red-900/50 flex items-center gap-2 text-xs text-red-300">
+          <div className="mb-4 p-3 rounded-sm bg-red-950/30 border border-red-900/50 flex items-center gap-2 text-xs text-red-300">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
             {error}
           </div>
@@ -78,23 +78,23 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Case Number / FIR ID *</label>
+              <label className="block text-zinc-300 font-medium mb-1">Case Number / FIR ID *</label>
               <input
                 type="text"
                 required
                 value={formData.case_number}
                 onChange={(e) => setFormData({ ...formData, case_number: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500 font-mono"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 font-mono"
                 placeholder="e.g. FIR-2024-WB-0412"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Crime Classification *</label>
+              <label className="block text-zinc-300 font-medium mb-1">Crime Classification *</label>
               <select
                 value={formData.crime_type}
                 onChange={(e) => setFormData({ ...formData, crime_type: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white focus:outline-none focus:border-zinc-500"
               >
                 <option value="Cyber Financial Fraud">Cyber Financial Fraud</option>
                 <option value="Ransomware & Extortion">Ransomware & Extortion</option>
@@ -109,35 +109,35 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Case Title *</label>
+            <label className="block text-zinc-300 font-medium mb-1">Case Title *</label>
             <input
               type="text"
               required
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+              className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
               placeholder="e.g. Unauthorized Corporate Banking Server Intrusion"
             />
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">Incident Description</label>
+            <label className="block text-zinc-300 font-medium mb-1">Incident Description</label>
             <textarea
               rows={3}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+              className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
               placeholder="Provide a concise summary of the reported incident, modus operandi, and initial observations..."
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Investigation Status</label>
+              <label className="block text-zinc-300 font-medium mb-1">Investigation Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white focus:outline-none focus:border-zinc-500"
               >
                 <option value="OPEN">OPEN</option>
                 <option value="UNDER_INVESTIGATION">UNDER_INVESTIGATION</option>
@@ -147,11 +147,11 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Priority Level</label>
+              <label className="block text-zinc-300 font-medium mb-1">Priority Level</label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white focus:outline-none focus:border-zinc-500"
               >
                 <option value="LOW">LOW</option>
                 <option value="MEDIUM">MEDIUM</option>
@@ -161,54 +161,54 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Incident Date</label>
+              <label className="block text-zinc-300 font-medium mb-1">Incident Date</label>
               <input
                 type="date"
                 value={formData.incident_date}
                 onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white focus:outline-none focus:border-zinc-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Incident Location</label>
+              <label className="block text-zinc-300 font-medium mb-1">Incident Location</label>
               <input
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
                 placeholder="e.g. Sector 62, Cyber Hub, Noida"
               />
             </div>
 
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Police Station / Cell</label>
+              <label className="block text-zinc-300 font-medium mb-1">Police Station / Cell</label>
               <input
                 type="text"
                 value={formData.police_station}
                 onChange={(e) => setFormData({ ...formData, police_station: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500"
                 placeholder="e.g. Cyber Crime Special Cell"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-hairline">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              className="px-3.5 py-1.5 rounded-sm bg-transparent hover:bg-zinc-900 text-zinc-300 border border-hairline transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/20 transition disabled:opacity-50"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black font-medium transition disabled:opacity-50"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
               Create Case
             </button>
           </div>
