@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -18,6 +19,15 @@ test_engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+
+@pytest.fixture(autouse=True)
+def keep_unit_tests_offline(request, monkeypatch):
+    """Only the explicitly marked neural test may load/download a model."""
+    if request.node.get_closest_marker("neural_translation") is None:
+        monkeypatch.setenv("EVIDENTIAL_TRANSLATION_LOCAL_ONLY", "true")
+    else:
+        monkeypatch.delenv("EVIDENTIAL_TRANSLATION_LOCAL_ONLY", raising=False)
 
 
 @pytest.fixture(scope="session", autouse=True)

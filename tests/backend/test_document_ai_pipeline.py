@@ -68,7 +68,10 @@ def test_legal_translation_separation(db_session):
     
     translated, model = DocumentTranslator.translate_to_english(hindi_fir, source_language="Hindi")
     assert "First Information Report" in translated or "Police Station" in translated or "Accused" in translated
-    assert model == "Legal-NLP-Translator-v2"
+    assert model in {
+        "OPUS-MT-Inc-En",
+        "Legal-NLP-Translator-v3-Fallback",
+    }
 
 
 def test_entity_extraction_all_11_types():

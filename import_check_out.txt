@@ -1,0 +1,19 @@
+Importing OCR engine...
+  pypdf=True  opencv=True  paddle=True  tesseract=True
+Importing language detector...
+  English test: lang=English conf=0.99
+  Kannada test: lang=Kannada conf=0.99
+  Hindi test  : lang=Hindi conf=0.99
+Importing translator...
+  Supported: ['Hindi', 'Marathi', 'Kannada']
+  Kannada->EN: model=Legal-NLP-Translator-v3
+  Translation assertions PASSED
+Importing AI pipeline...
+  OK
+Importing FastAPI application...
+2026-09-06 19:04:45 [INFO] [evidential] Logging initialized at level: INFO
+  FastAPI app loaded, routes: 15
+
+==================================================
+ALL IMPORTS OK — backend is ready to start
+==================================================

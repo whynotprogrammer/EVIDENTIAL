@@ -24,6 +24,9 @@ class DocumentPreprocessor:
     Optimizes contrast, binarization, deskewing, and noise reduction for OCR engines.
     """
 
+    # Expose availability for external capability checks
+    HAS_OPENCV: bool = HAS_OPENCV
+
     @classmethod
     def load_image(cls, image_input: Union[str, bytes, Image.Image, np.ndarray]) -> np.ndarray:
         """Loads an image into a BGR/Grayscale NumPy array."""
