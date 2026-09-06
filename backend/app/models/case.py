@@ -1,12 +1,13 @@
 import enum
 from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from backend.app.db.session import Base
 
 
 class CaseStatus(str, enum.Enum):
+    IMPORTED = "IMPORTED"
     OPEN = "OPEN"
     UNDER_INVESTIGATION = "UNDER_INVESTIGATION"
     PENDING_REVIEW = "PENDING_REVIEW"
@@ -37,6 +38,41 @@ class Case(Base):
     state = Column(String(128), nullable=True)
     location = Column(String(255), nullable=True)
     incident_date = Column(DateTime, nullable=True)
+
+    # Karnataka Police FIR source fields. These retain the CSV values separately
+    # from EVIDENTIAL's operational case metadata (status, priority, ownership).
+    source_record_key = Column(String(64), unique=True, index=True, nullable=True)
+    fir_year = Column(Integer, nullable=True, index=True)
+    fir_month = Column(Integer, nullable=True, index=True)
+    fir_day = Column(Integer, nullable=True)
+    fir_type = Column(String(64), nullable=True)
+    fir_stage = Column(String(255), nullable=True, index=True)
+    complaint_mode = Column(String(128), nullable=True)
+    crime_head = Column(String(255), nullable=True, index=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    offence_duration = Column(String(128), nullable=True)
+    act_section = Column(Text, nullable=True)
+    io_name = Column(String(255), nullable=True)
+    kgid = Column(String(64), nullable=True)
+    internal_io = Column(String(64), nullable=True)
+    distance_from_ps = Column(String(255), nullable=True)
+    beat_name = Column(String(255), nullable=True)
+    village_area_name = Column(String(255), nullable=True)
+    male = Column(Integer, nullable=True)
+    female = Column(Integer, nullable=True)
+    boy = Column(Integer, nullable=True)
+    girl = Column(Integer, nullable=True)
+    age_0 = Column(Integer, nullable=True)
+    victim_count = Column(Integer, nullable=True)
+    accused_count = Column(Integer, nullable=True)
+    arrested_male = Column(Integer, nullable=True)
+    arrested_female = Column(Integer, nullable=True)
+    arrested_count = Column(Integer, nullable=True)
+    accused_chargesheeted_count = Column(Integer, nullable=True)
+    conviction_count = Column(Integer, nullable=True)
+    unit_id = Column(String(64), nullable=True)
+    source_payload = Column(JSON, nullable=True)
 
     # Ownership & Creator
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)

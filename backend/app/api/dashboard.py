@@ -1,6 +1,7 @@
 from typing import Any, Dict, List
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from backend.app.api.deps import get_current_user, get_db
@@ -19,39 +20,58 @@ def get_dashboard_stats(
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Provide aggregated command center metrics and distribution charts."""
-    total_cases = db.query(Case).count()
+    # The command-center FIR figures intentionally include only imported source
+    # records, never manually created demo/investigation cases.
+    fir_query = db.query(Case).filter(Case.source_record_key != None)
+    total_cases = fir_query.count()
     active_investigations = (
-        db.query(Case)
-        .filter(Case.status.in_([CaseStatus.OPEN, CaseStatus.UNDER_INVESTIGATION]))
+        fir_query.filter(Case.fir_stage == "Under Investigation")
         .count()
     )
-    documents_processed = (
-        db.query(Document)
-        .filter(Document.processing_status == DocumentProcessingStatus.COMPLETED)
-        .count()
-    )
-    total_evidence = db.query(Evidence).count()
+    # Existing installations may predate document/evidence schema migrations.
+    # These optional non-FIR counters must never prevent verified FIR metrics
+    # from loading.
+    try:
+        documents_processed = (
+            db.query(Document)
+            .filter(Document.processing_status == DocumentProcessingStatus.COMPLETED)
+            .count()
+        )
+    except OperationalError:
+        db.rollback()
+        documents_processed = 0
+    try:
+        total_evidence = db.query(Evidence).count()
+    except OperationalError:
+        db.rollback()
+        total_evidence = 0
 
     # Cases grouped by status
     status_counts = (
-        db.query(Case.status, func.count(Case.id))
-        .group_by(Case.status)
+        fir_query.with_entities(Case.fir_stage, func.count(Case.id))
+        .group_by(Case.fir_stage)
         .all()
     )
     cases_by_status = [
-        {"name": status.value if hasattr(status, "value") else str(status), "count": count}
+        {"name": status or "Not Available", "count": count}
         for status, count in status_counts
     ]
 
     # Cases grouped by crime type
     crime_counts = (
-        db.query(Case.crime_type, func.count(Case.id))
+        fir_query.with_entities(Case.crime_type, func.count(Case.id))
         .group_by(Case.crime_type)
         .order_by(func.count(Case.id).desc())
         .limit(8)
         .all()
     )
     cases_by_crime_type = [{"name": crime, "count": count} for crime, count in crime_counts]
+
+    def grouped(column):
+        return [
+            {"name": str(value) if value is not None else "Not Available", "count": count}
+            for value, count in fir_query.with_entities(column, func.count(Case.id)).group_by(column).order_by(func.count(Case.id).desc()).all()
+        ]
 
     # Cases/documents grouped by detected language
     lang_counts = (
@@ -66,12 +86,16 @@ def get_dashboard_stats(
     ]
 
     # Recent Audit Log Activity
-    recent_audits = (
-        db.query(AuditEvent)
-        .order_by(AuditEvent.timestamp.desc())
-        .limit(10)
-        .all()
-    )
+    try:
+        recent_audits = (
+            db.query(AuditEvent)
+            .order_by(AuditEvent.timestamp.desc())
+            .limit(10)
+            .all()
+        )
+    except OperationalError:
+        db.rollback()
+        recent_audits = []
     audit_list = [
         {
             "id": a.id,
@@ -96,6 +120,11 @@ def get_dashboard_stats(
         },
         "cases_by_status": cases_by_status,
         "cases_by_crime_type": cases_by_crime_type,
+        "firs_by_district": grouped(Case.district),
+        "firs_by_crime_head": grouped(Case.crime_head),
+        "firs_by_year": grouped(Case.fir_year),
+        "firs_by_month": grouped(Case.fir_month),
+        "records_with_valid_coordinates": fir_query.filter(Case.latitude != None, Case.longitude != None).count(),
         "cases_by_language": cases_by_language,
         "recent_audit_events": audit_list,
     }

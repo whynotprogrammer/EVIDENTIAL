@@ -53,6 +53,7 @@ interface ChatMessage {
   citations?: SourceCitation[];
   uncertaintyFlag?: boolean;
   confidenceLevel?: string;
+  groundedScore?: number;
 }
 
 export default function AICopilotPage() {

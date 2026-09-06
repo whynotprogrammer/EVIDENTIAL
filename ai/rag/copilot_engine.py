@@ -69,16 +69,49 @@ class InvestigationCopilotEngine:
         evidence_items = case_data.get("evidence_items", [])
         timeline_events = case_data.get("timeline_events", [])
         correlations = case_data.get("correlations", [])
+        correlations_available = case_data.get("correlations_available", True)
+        source_fir = case_data.get("source_fir") or {}
 
         citations: List[Dict[str, Any]] = []
 
         # 2. Case Summary Queries
         if any(k in q_lower for k in ("summarize", "summary", "overview", "what is this case about", "describe this case")):
+            if source_fir:
+                def display(value: Any) -> str:
+                    return str(value) if value is not None and value != "" else "Not Available"
+
+                date_parts = [source_fir.get("fir_year"), source_fir.get("fir_month"), source_fir.get("fir_day")]
+                fir_date = "-".join(str(part).zfill(2) if index else str(part) for index, part in enumerate(date_parts)) if all(part is not None for part in date_parts) else "Not Available"
+                lines = [
+                    f"**Source FIR Summary ({display(source_fir.get('record_id'))})**",
+                    f"- **Crime group**: {display(source_fir.get('crime_group'))}",
+                    f"- **Crime head**: {display(source_fir.get('crime_head'))}",
+                    f"- **FIR stage**: {display(source_fir.get('fir_stage'))}",
+                    f"- **FIR date**: {fir_date}",
+                    f"- **District / police unit**: {display(source_fir.get('district'))} / {display(source_fir.get('unit_name'))}",
+                    f"- **Place of offence**: {display(source_fir.get('place_of_offence'))}",
+                    f"- **Act / section**: {display(source_fir.get('act_section'))}",
+                    f"- **Recorded counts**: victims {display(source_fir.get('victim_count'))}; accused {display(source_fir.get('accused_count'))}; arrested {display(source_fir.get('arrested_count'))}; convictions {display(source_fir.get('conviction_count'))}.",
+                    f"- **Attached EVIDENTIAL documents**: {len(documents)}. **Evidence items**: {len(evidence_items)}.",
+                ]
+                citations.append({
+                    "citation_id": f"cit-case-{case_data.get('id')}",
+                    "source_type": "CASE_RECORD",
+                    "source_title": f"Source FIR Record {source_fir.get('record_id')}",
+                    "document_filename": None,
+                    "snippet": f"Crime group: {display(source_fir.get('crime_group'))}; FIR stage: {display(source_fir.get('fir_stage'))}",
+                })
+                return {
+                    "answer": "\n".join(lines),
+                    "citations": citations,
+                    "uncertainty_flag": False,
+                    "confidence_level": "HIGH",
+                }
             lines = [
                 f"**Case Summary ({case_number})**: {case_title}",
                 f"- **Classification**: {crime_type}",
                 f"- **Jurisdiction / Location**: {case_data.get('location') or 'Jurisdiction-wide'} (Police Station: {case_data.get('police_station') or 'State Directorate'})",
-                f"- **Narrative Overview**: {case_desc or 'FIR registered and currently under digital investigation.'}",
+                f"- **Narrative Overview**: {case_desc or 'Not Available'}",
                 f"- **Document Records**: {len(documents)} verified document(s) uploaded and secured.",
                 f"- **Secured Evidence**: {len(evidence_items)} physical/digital evidence item(s) in chain-of-custody.",
             ]
@@ -87,7 +120,7 @@ class InvestigationCopilotEngine:
                 "source_type": "CASE_RECORD",
                 "source_title": f"FIR Record #{case_number}",
                 "document_filename": f"FIR-{case_number}.pdf",
-                "snippet": case_desc[:200] if case_desc else f"Official FIR {case_number}",
+                    "snippet": case_desc[:200] if case_desc else "No narrative overview is available in the authorized case data.",
             })
             for doc in documents:
                 citations.append({
@@ -193,7 +226,7 @@ class InvestigationCopilotEngine:
                 inc_date = case_data.get("incident_date")
                 if inc_date:
                     return {
-                        "answer": f"**Chronological Summary for Case {case_number}**:\n- **{inc_date}**: FIR Registered for crime {crime_type} at {case_data.get('location') or 'jurisdiction'}.\n\n[Source: Case Record #{case_number}]",
+                        "answer": f"**Chronological Summary for Case {case_number}**:\n- **{inc_date}**: Source FIR date recorded for crime group {crime_type}; location: {case_data.get('location') or 'Not Available'}.\n\n[Source: Case Record #{case_number}]",
                         "citations": [{
                             "citation_id": f"cit-case-{case_data.get('id')}",
                             "source_type": "CASE_RECORD",
@@ -236,6 +269,13 @@ class InvestigationCopilotEngine:
 
         # 6. Related FIRs / Cross-Case Queries
         if any(k in q_lower for k in ("related", "firs", "similar", "correlat", "other cases", "which firs", "links")):
+            if not correlations_available:
+                return {
+                    "answer": f"{cls.ABSENT_INFO_FALLBACK} Potential related-FIR analysis is unavailable for case {case_number}.",
+                    "citations": [],
+                    "uncertainty_flag": True,
+                    "confidence_level": "LOW",
+                }
             if not correlations:
                 return {
                     "answer": f"**Cross-FIR Analysis for Case {case_number}**:\nNo significant potential correlations detected with other authorized cases above threshold.\n\n[Source: Cross-FIR Correlation Engine]",
@@ -244,7 +284,10 @@ class InvestigationCopilotEngine:
                     "confidence_level": "HIGH",
                 }
 
-            lines = [f"**Potential Correlated FIRs for Case {case_number}**:"]
+            lines = [
+                f"**Potentially Related FIRs for Case {case_number}**:",
+                "Scores below are data-based similarity scores, not confirmed relationships.",
+            ]
             for corr in correlations:
                 rel = corr.get("related_case", {})
                 rel_num = rel.get("case_number", "Unknown FIR")

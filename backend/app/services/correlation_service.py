@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from ai.correlation.correlation_engine import CorrelationEngine
 from backend.app.models.audit import AuditAction, AuditEvent, AuditStatus
@@ -61,6 +61,7 @@ class CorrelationService:
 
         documents = (
             db.query(Document)
+            .options(load_only(Document.id, Document.case_id, Document.original_text))
             .filter(Document.case_id == case_id)
             .all()
         )
@@ -89,6 +90,16 @@ class CorrelationService:
             "entities": entity_dicts,
             "documents": doc_dicts,
             "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+            "source_record_key": case.source_record_key,
+            "district": case.district,
+            "fir_year": case.fir_year,
+            "fir_month": case.fir_month,
+            "crime_head": case.crime_head,
+            "fir_stage": case.fir_stage,
+            "fir_type": case.fir_type,
+            "act_section": case.act_section,
+            "latitude": case.latitude,
+            "longitude": case.longitude,
         }
 
     @classmethod
@@ -120,6 +131,10 @@ class CorrelationService:
                 detail=f"Source case ID {case_id} not found.",
             )
 
+        # A single broad matching field is not enough to call two source FIRs
+        # potentially related. Imported FIRs therefore use a conservative floor.
+        effective_threshold = max(min_threshold, 0.35) if source_case_data.get("source_record_key") else min_threshold
+
         # 2. Determine candidate related cases (strictly within authorized set)
         if target_case_id:
             if target_case_id not in authorized_case_ids:
@@ -145,7 +160,7 @@ class CorrelationService:
                 min_threshold=min_threshold,
             )
 
-            if analysis["correlation_score"] >= min_threshold:
+            if analysis["correlation_score"] >= effective_threshold:
                 matched_entities = [
                     MatchedEntityItem(
                         entity_type=me["entity_type"],
@@ -171,6 +186,9 @@ class CorrelationService:
                         title=analysis["related_case"]["title"],
                         crime_type=analysis["related_case"]["crime_type"],
                         status=cand_data.get("status"),
+                        district=cand_data.get("district"),
+                        fir_year=cand_data.get("fir_year"),
+                        crime_head=cand_data.get("crime_head"),
                     ),
                     correlation_score=analysis["correlation_score"],
                     matching_entities=matched_entities,
@@ -211,6 +229,7 @@ class CorrelationService:
 
         # Sort descending by correlation score
         correlations.sort(key=lambda c: c.correlation_score, reverse=True)
+        correlations = correlations[:10]
 
         # 4. Audit logging
         audit_entry = AuditEvent(

@@ -445,10 +445,10 @@ export default function CaseDetailPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs font-bold px-3 py-1 rounded-lg bg-blue-950 border border-blue-800 text-blue-300">
-                    {caseData.case_number}
+                    {caseData.source_record_key ? "FIR ID: Not Available" : caseData.case_number}
                   </span>
                   <span className={`text-xs font-bold px-3 py-1 rounded-lg border ${getStatusBadge(caseData.status)}`}>
-                    {caseData.status.replace("_", " ")}
+                    {caseData.fir_stage || caseData.status.replace("_", " ")}
                   </span>
                   <span className="text-xs font-bold px-3 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300">
                     Priority: {caseData.priority}
@@ -585,6 +585,31 @@ export default function CaseDetailPage() {
                 </p>
               </div>
             </div>
+
+            {caseData.source_record_key && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-5 space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Karnataka Police Source FIR Data</h2>
+                  <p className="text-[11px] text-slate-400 mt-1">Original-source fields; unavailable values are shown as Not Available. Personnel identifiers are masked in the interface.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                  {[
+                    ["District", caseData.district], ["Police unit", caseData.police_station], ["FIR year", caseData.fir_year],
+                    ["FIR month", caseData.fir_month], ["FIR day", caseData.fir_day], ["FIR type", caseData.fir_type],
+                    ["FIR stage", caseData.fir_stage], ["Crime group", caseData.crime_type], ["Crime head", caseData.crime_head],
+                    ["Complaint mode", caseData.complaint_mode], ["Act / section", caseData.act_section], ["Place of offence", caseData.location],
+                    ["Victim count", caseData.victim_count], ["Accused count", caseData.accused_count], ["Arrested count", caseData.arrested_count],
+                    ["Charge-sheeted count", caseData.accused_chargesheeted_count], ["Conviction count", caseData.conviction_count],
+                    ["Coordinates", caseData.latitude != null && caseData.longitude != null ? `${caseData.latitude}, ${caseData.longitude}` : undefined],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+                      <p className="text-[10px] text-slate-500 uppercase">{label}</p>
+                      <p className="text-slate-200 mt-1 break-words">{value == null || value === "" ? "Not Available" : String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Ownership & Audit Information */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400 font-mono">
@@ -762,13 +787,13 @@ export default function CaseDetailPage() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white flex items-center gap-2">
-                      Cross-FIR Potential Correlations
+                      Potentially Related FIRs
                       <span className="text-xs px-2 py-0.5 rounded-full bg-purple-950 border border-purple-800 text-purple-300 font-mono">
                         {correlations.length} Detected
                       </span>
                     </h2>
                     <p className="text-[11px] text-slate-400">
-                      Explainable multi-dimensional intelligence linking shared suspects, phone numbers, vehicles, locations, and crime patterns.
+                      Explainable similarities based only on available FIR fields, such as crime classification, jurisdiction, time, coordinates, and FIR-field similarity.
                     </p>
                   </div>
                 </div>
@@ -783,7 +808,7 @@ export default function CaseDetailPage() {
                   ) : (
                     <GitFork className="w-3.5 h-3.5" />
                   )}
-                  <span>Re-analyze Correlations</span>
+                  <span>Find Similar FIRs</span>
                 </button>
               </div>
 
@@ -791,7 +816,7 @@ export default function CaseDetailPage() {
               <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-start gap-2.5 text-[11px] text-slate-400">
                 <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                 <p>
-                  <strong className="text-slate-200">Investigative Guardrail Notice:</strong> The engine identifies potential correlation links based on shared entity identifiers, spatial-temporal proximity, and semantic similarity. Automated systems never establish guilt or legal liability.
+                  <strong className="text-slate-200">Investigative Guardrail Notice:</strong> Similarity scores indicate potential connections only. They are not proof of a relationship, criminal involvement, guilt, or legal liability.
                 </p>
               </div>
 
@@ -803,9 +828,9 @@ export default function CaseDetailPage() {
               ) : correlations.length === 0 ? (
                 <div className="border border-dashed border-slate-800 rounded-xl p-8 text-center space-y-2 bg-slate-950/40">
                   <Network className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-xs font-semibold text-slate-300">No Significant Cross-Case Correlations Detected</p>
+                  <p className="text-xs font-semibold text-slate-300">No sufficiently similar FIRs were found in the available dataset</p>
                   <p className="text-[11px] text-slate-500 max-w-md mx-auto">
-                    No other authorized cases currently share critical identifiers (phone numbers, vehicles, suspect names, locations) with this FIR.
+                    No other authorized FIRs met the evidence-based similarity threshold.
                   </p>
                 </div>
               ) : (
@@ -838,11 +863,15 @@ export default function CaseDetailPage() {
                             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
                               {corr.related_case.crime_type}
                             </span>
+                            <span className="text-[10px] text-slate-500 ml-2">
+                              {corr.related_case.district || "Not Available"} • {corr.related_case.fir_year || "Year Not Available"}
+                              {corr.related_case.crime_head ? ` • ${corr.related_case.crime_head}` : ""}
+                            </span>
                           </div>
 
                           <div className="flex items-center gap-3">
                             <span className={`text-xs font-bold px-3 py-1 rounded-lg border font-mono ${scoreBadge}`}>
-                              Correlation Score: {score.toFixed(2)}
+                              Similarity Score: {(score * 100).toFixed(0)}%
                             </span>
                             <Link
                               href={`/cases/${corr.related_case.id}`}

@@ -152,13 +152,13 @@ export default function DashboardPage() {
 
           <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
             <div className="flex items-center justify-between text-mute">
-              <span className="text-xs font-medium">Resolved Cases</span>
+              <span className="text-xs font-medium">Convicted FIRs</span>
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <div className="text-2xl font-semibold text-emerald-400">
-              {recentCases.filter((c) => c.status === "CLOSED").length}
+              {stats?.cases_by_status.find((item) => item.name === "Convicted")?.count ?? 0}
             </div>
-            <p className="text-[11px] text-mute font-mono">Closed & Archived</p>
+            <p className="text-[11px] text-mute font-mono">Source FIR Stage</p>
           </div>
 
           <div className="p-4 rounded-sm bg-canvas-elevated border border-hairline space-y-1.5">
@@ -214,7 +214,7 @@ export default function DashboardPage() {
 
                     <div className="text-right">
                       <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm bg-zinc-900 text-zinc-300 border border-hairline">
-                        {c.status.replace("_", " ")}
+                        {c.fir_stage || c.status.replace("_", " ")}
                       </span>
                     </div>
                   </Link>

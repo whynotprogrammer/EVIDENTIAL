@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only
 
 from ai.rag.copilot_engine import InvestigationCopilotEngine
 from backend.app.models.audit import AuditAction, AuditEvent, AuditStatus
@@ -55,13 +55,28 @@ class CopilotService:
                 detail=f"Case ID {case_id} not found.",
             )
 
-        documents = db.query(Document).filter(Document.case_id == case_id).all()
+        # Some existing local databases predate optional Document columns such
+        # as ``original_filename``. Load only the columns required for grounded
+        # Copilot context so an FIR with no attached documents remains usable.
+        documents = (
+            db.query(Document)
+            .options(load_only(
+                Document.id, Document.case_id, Document.filename,
+                Document.file_size_bytes, Document.sha256_hash,
+                Document.processing_status, Document.detected_language,
+                Document.original_text,
+            ))
+            .filter(Document.case_id == case_id)
+            .all()
+        )
+        document_names_by_id = {document.id: document.filename for document in documents}
         doc_data = []
         for d in documents:
             trans = db.query(DocumentTranslation).filter(DocumentTranslation.document_id == d.id).first()
             doc_data.append({
                 "id": d.id,
-                "original_filename": d.original_filename,
+                # ``filename`` is available in both legacy and current schema.
+                "original_filename": d.filename,
                 "file_size_bytes": d.file_size_bytes,
                 "sha256_hash": d.sha256_hash,
                 "processing_status": d.processing_status.value if hasattr(d.processing_status, "value") else str(d.processing_status),
@@ -83,7 +98,9 @@ class CopilotService:
                 "normalized_value": e.normalized_value,
                 "confidence": e.confidence,
                 "context_snippet": e.context_snippet,
-                "source_document": e.document.original_filename if e.document else None,
+                # Use the safely loaded document metadata rather than
+                # lazy-loading the legacy Document relationship.
+                "source_document": document_names_by_id.get(e.document_id),
             })
 
         evidence_items = db.query(Evidence).filter(Evidence.case_id == case_id).all()
@@ -105,12 +122,12 @@ class CopilotService:
             tl_data.append({
                 "id": f"case-{case.id}-fir",
                 "event_date": case.incident_date.isoformat() if hasattr(case.incident_date, "isoformat") else str(case.incident_date),
-                "event_type": "FIR_REGISTERED",
-                "title": f"FIR Registered: {case.case_number}",
-                "description": case.description or f"FIR registered for {case.crime_type}",
-                "source": f"FIR Record #{case.case_number}",
+                "event_type": "SOURCE_FIR_DATE",
+                "title": "Source FIR date",
+                "description": "FIR year, month, and day recorded in the source dataset.",
+                "source": f"Source FIR Record {case.case_number}",
                 "source_type": "CASE_RECORD",
-                "source_document": f"FIR-{case.case_number}.pdf",
+                "source_document": None,
             })
         for ie in investigation_events:
             src_doc = ie.source_document.original_filename if ie.source_document else f"Officer Log #{ie.id}"
@@ -127,6 +144,7 @@ class CopilotService:
 
         # Gather authorized correlations
         correlations_data = []
+        correlations_available = True
         try:
             corr_resp = CorrelationService.get_correlations_for_case(
                 db=db, current_user=current_user, case_id=case_id, min_threshold=0.3
@@ -137,13 +155,18 @@ class CopilotService:
                         "id": c.related_case.id,
                         "case_number": c.related_case.case_number,
                         "title": c.related_case.title,
+                        "crime_type": c.related_case.crime_type,
+                        "district": c.related_case.district,
+                        "fir_year": c.related_case.fir_year,
+                        "crime_head": c.related_case.crime_head,
                     },
                     "correlation_score": c.correlation_score,
                     "matching_factors": c.matching_factors,
                     "explanation": c.explanation,
                 })
-        except Exception as ex:
-            logger.warning(f"Could not load correlations for case {case_id}: {ex}")
+        except Exception:
+            logger.warning("Could not load correlations for case %s", case_id)
+            correlations_available = False
 
         return {
             "id": case.id,
@@ -154,11 +177,31 @@ class CopilotService:
             "location": case.location,
             "police_station": case.police_station,
             "incident_date": case.incident_date.isoformat() if case.incident_date and hasattr(case.incident_date, "isoformat") else str(case.incident_date or ""),
+            "source_fir": {
+                "record_id": case.case_number,
+                "district": case.district,
+                "unit_name": case.police_station,
+                "fir_year": case.fir_year,
+                "fir_month": case.fir_month,
+                "fir_day": case.fir_day,
+                "fir_type": case.fir_type,
+                "fir_stage": case.fir_stage,
+                "crime_group": case.crime_type,
+                "crime_head": case.crime_head,
+                "complaint_mode": case.complaint_mode,
+                "place_of_offence": case.location,
+                "act_section": case.act_section,
+                "victim_count": case.victim_count,
+                "accused_count": case.accused_count,
+                "arrested_count": case.arrested_count,
+                "conviction_count": case.conviction_count,
+            } if case.source_record_key else None,
             "documents": doc_data,
             "entities": ent_data,
             "evidence_items": ev_data,
             "timeline_events": tl_data,
             "correlations": correlations_data,
+            "correlations_available": correlations_available,
         }
 
     @classmethod

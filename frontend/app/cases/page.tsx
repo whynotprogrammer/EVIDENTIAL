@@ -24,7 +24,9 @@ export default function CasesPage() {
   const [cases, setCases] = useState<CaseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [stageFilter, setStageFilter] = useState("");
+  const [districtFilter, setDistrictFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -44,7 +46,10 @@ export default function CasesPage() {
     try {
       const data = await getCases({
         search: search.trim() || undefined,
-        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        fir_stage: stageFilter || undefined,
+        district: districtFilter || undefined,
+        fir_year: yearFilter ? Number(yearFilter) : undefined,
+        limit: 100,
       });
       setCases(data);
     } catch (err) {
@@ -60,7 +65,7 @@ export default function CasesPage() {
 
   useEffect(() => {
     fetchCasesData();
-  }, [search, statusFilter]);
+  }, [search, stageFilter, districtFilter, yearFilter]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -118,30 +123,31 @@ export default function CasesPage() {
 
         {/* Filter & Search Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-canvas-elevated p-3 rounded-md border border-hairline">
-          <div className="md:col-span-3 relative">
+          <div className="md:col-span-2 relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-mute" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search across case number, title, description, location, crime type..."
+              placeholder="Search FIR source data: district, unit, crime, stage..."
               className="w-full pl-9 pr-3 py-1.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 font-mono"
             />
           </div>
 
           <div>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              value={districtFilter}
+              onChange={(e) => setDistrictFilter(e.target.value)}
               className="w-full py-1.5 px-2.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-zinc-200 focus:outline-none focus:border-zinc-500"
             >
-              <option value="ALL">All Statuses</option>
-              <option value="OPEN">OPEN</option>
-              <option value="UNDER_INVESTIGATION">UNDER INVESTIGATION</option>
-              <option value="PENDING_REVIEW">PENDING REVIEW</option>
-              <option value="CLOSED">CLOSED</option>
+              <option value="">All Districts</option>
+              <option value="Bengaluru">Bengaluru</option>
+              <option value="Mysuru">Mysuru</option>
+              <option value="Bagalkot">Bagalkot</option>
             </select>
           </div>
+          <input value={yearFilter} onChange={(e) => setYearFilter(e.target.value)} placeholder="FIR year" inputMode="numeric" className="w-full py-1.5 px-2.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-zinc-200" />
+          <input value={stageFilter} onChange={(e) => setStageFilter(e.target.value)} placeholder="FIR stage" className="w-full py-1.5 px-2.5 bg-zinc-950 border border-hairline rounded-sm text-xs text-zinc-200" />
         </div>
 
         {/* Case Cards Grid */}
@@ -176,7 +182,7 @@ export default function CasesPage() {
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-semibold text-white bg-zinc-900 border border-hairline px-2 py-0.5 rounded-sm">
-                      {c.case_number}
+                      {c.source_record_key ? "FIR ID: Not Available" : c.case_number}
                     </span>
                     <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-sm border ${getPriorityBadge(c.priority)}`}>
                       {c.priority}
@@ -216,7 +222,7 @@ export default function CasesPage() {
 
                 <div className="mt-4 pt-3 border-t border-hairline flex items-center justify-between">
                   <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-sm border ${getStatusBadge(c.status)}`}>
-                    {c.status.replace("_", " ")}
+                      {c.fir_stage || c.status.replace("_", " ")}
                   </span>
                   <span className="text-xs text-mute group-hover:text-white transition flex items-center gap-1 font-medium">
                     Open Case <ArrowRight className="w-3 h-3" />

@@ -47,6 +47,12 @@ class CorrelationEngine:
         "criminal responsibility established",
     ]
 
+    FIR_WEIGHTS = {
+        "CRIME_GROUP": 0.30, "CRIME_HEAD": 0.15, "DISTRICT": 0.15,
+        "POLICE_UNIT": 0.12, "YEAR": 0.06, "MONTH": 0.03,
+        "GEO": 0.12, "SEMANTIC": 0.07,
+    }
+
     @classmethod
     def normalize_phone(cls, phone: Optional[str]) -> str:
         """Extract only digits from a phone number, preserving last 10 digits for Indian standard."""
@@ -135,6 +141,10 @@ class CorrelationEngine:
           - entities: list of dicts with 'entity_type', 'entity_value', 'normalized_value'
           - documents: list of dicts with 'original_text', 'translated_text'
         """
+        # Imported FIRs are compared using their real structured source fields.
+        if source_case_data.get("source_record_key") and related_case_data.get("source_record_key"):
+            return cls._compare_imported_firs(source_case_data, related_case_data)
+
         matching_factors: List[str] = []
         matching_entities: List[Dict[str, Any]] = []
         factor_scores: Dict[str, float] = {}
@@ -408,6 +418,70 @@ class CorrelationEngine:
             "matching_factors": unique_factors,
             "factor_scores": factor_scores,
             "explanation": explanation,
+        }
+
+    @classmethod
+    def _fir_representation(cls, case: Dict[str, Any]) -> str:
+        """Deterministic local representation from actual FIR source fields."""
+        fields = ("district", "police_station", "fir_year", "fir_month", "crime_type", "crime_head", "fir_stage", "location", "fir_type", "act_section")
+        return " ".join(str(case[field]) for field in fields if case.get(field) not in (None, ""))
+
+    @staticmethod
+    def _coordinate_distance_km(a_lat: float, a_lon: float, b_lat: float, b_lon: float) -> float:
+        radius_km = 6371.0
+        a_lat, a_lon, b_lat, b_lon = map(math.radians, (a_lat, a_lon, b_lat, b_lon))
+        d_lat, d_lon = b_lat - a_lat, b_lon - a_lon
+        h = math.sin(d_lat / 2) ** 2 + math.cos(a_lat) * math.cos(b_lat) * math.sin(d_lon / 2) ** 2
+        return radius_km * 2 * math.asin(math.sqrt(h))
+
+    @classmethod
+    def _compare_imported_firs(cls, source: Dict[str, Any], related: Dict[str, Any]) -> Dict[str, Any]:
+        """Conservative, explainable similarity over imported FIR data only."""
+        factors: List[str] = []
+        scores: Dict[str, float] = {key: 0.0 for key in cls.FIR_WEIGHTS}
+
+        def equal(field: str, key: str, label: str) -> None:
+            left, right = source.get(field), related.get(field)
+            if left not in (None, "") and right not in (None, "") and str(left).strip().casefold() == str(right).strip().casefold():
+                scores[key] = 1.0
+                factors.append(f"Same {label} ({left})")
+
+        equal("crime_type", "CRIME_GROUP", "crime group")
+        equal("crime_head", "CRIME_HEAD", "crime head")
+        equal("district", "DISTRICT", "district")
+        equal("police_station", "POLICE_UNIT", "police unit")
+        equal("fir_year", "YEAR", "FIR year")
+        equal("fir_month", "MONTH", "FIR month")
+
+        coordinates = (source.get("latitude"), source.get("longitude"), related.get("latitude"), related.get("longitude"))
+        if all(value is not None for value in coordinates):
+            distance = cls._coordinate_distance_km(*coordinates)
+            if distance <= 5:
+                scores["GEO"] = 1.0
+                factors.append(f"Recorded coordinates are approximately {distance:.1f} km apart")
+            elif distance <= 20:
+                scores["GEO"] = 0.5
+                factors.append(f"Recorded coordinates are approximately {distance:.1f} km apart")
+
+        semantic = DocumentEmbedder.cosine_similarity(
+            DocumentEmbedder.generate_embedding(cls._fir_representation(source)),
+            DocumentEmbedder.generate_embedding(cls._fir_representation(related)),
+        )
+        if semantic >= 0.55:
+            scores["SEMANTIC"] = semantic
+            factors.append(f"Similar FIR field representation (similarity: {semantic:.2f})")
+
+        structured_match = any(scores[key] > 0 for key in ("CRIME_GROUP", "CRIME_HEAD", "DISTRICT", "POLICE_UNIT", "YEAR", "MONTH", "GEO"))
+        score = sum(cls.FIR_WEIGHTS[key] * scores[key] for key in cls.FIR_WEIGHTS) if structured_match else 0.0
+        score = round(min(score, 1.0), 3)
+        explanation = cls._generate_explanation(score, factors, False)
+        cls._assert_ethical_guardrails(explanation)
+        return {
+            "source_case": {key: source.get(key) for key in ("id", "case_number", "title", "crime_type")},
+            "related_case": {key: related.get(key) for key in ("id", "case_number", "title", "crime_type")},
+            "correlation_score": score,
+            "matching_entities": [], "matching_factors": factors,
+            "factor_scores": scores, "explanation": explanation,
         }
 
     @classmethod

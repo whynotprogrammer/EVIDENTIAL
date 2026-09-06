@@ -28,9 +28,14 @@ def list_cases(
     status: Optional[CaseStatus] = None,
     crime_type: Optional[str] = None,
     priority: Optional[CasePriority] = None,
+    district: Optional[str] = None,
+    police_station: Optional[str] = None,
+    crime_head: Optional[str] = None,
+    fir_year: Optional[int] = Query(None, ge=1900, le=2100),
+    fir_stage: Optional[str] = None,
     search: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -58,6 +63,16 @@ def list_cases(
         query = query.filter(Case.crime_type.ilike(f"%{crime_type}%"))
     if priority:
         query = query.filter(Case.priority == priority)
+    if district:
+        query = query.filter(Case.district.ilike(f"%{district}%"))
+    if police_station:
+        query = query.filter(Case.police_station.ilike(f"%{police_station}%"))
+    if crime_head:
+        query = query.filter(Case.crime_head.ilike(f"%{crime_head}%"))
+    if fir_year:
+        query = query.filter(Case.fir_year == fir_year)
+    if fir_stage:
+        query = query.filter(Case.fir_stage.ilike(f"%{fir_stage}%"))
     if search:
         search_term = f"%{search}%"
         query = query.filter(
@@ -68,6 +83,9 @@ def list_cases(
                 Case.location.ilike(search_term),
                 Case.crime_type.ilike(search_term),
                 Case.police_station.ilike(search_term),
+                Case.district.ilike(search_term),
+                Case.crime_head.ilike(search_term),
+                Case.fir_stage.ilike(search_term),
             )
         )
     

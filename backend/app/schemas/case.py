@@ -54,6 +54,34 @@ class CaseOut(CaseBase):
     assigned_officer_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
+    source_record_key: Optional[str] = None
+    fir_year: Optional[int] = None
+    fir_month: Optional[int] = None
+    fir_day: Optional[int] = None
+    fir_type: Optional[str] = None
+    fir_stage: Optional[str] = None
+    complaint_mode: Optional[str] = None
+    crime_head: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    offence_duration: Optional[str] = None
+    act_section: Optional[str] = None
+    distance_from_ps: Optional[str] = None
+    beat_name: Optional[str] = None
+    village_area_name: Optional[str] = None
+    male: Optional[int] = None
+    female: Optional[int] = None
+    boy: Optional[int] = None
+    girl: Optional[int] = None
+    age_0: Optional[int] = None
+    victim_count: Optional[int] = None
+    accused_count: Optional[int] = None
+    arrested_male: Optional[int] = None
+    arrested_female: Optional[int] = None
+    arrested_count: Optional[int] = None
+    accused_chargesheeted_count: Optional[int] = None
+    conviction_count: Optional[int] = None
+    unit_id: Optional[str] = None
 
     @computed_field
     def case_id(self) -> str:

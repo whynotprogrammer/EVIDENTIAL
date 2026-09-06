@@ -8,6 +8,9 @@ class CaseSummary(BaseModel):
     title: str
     crime_type: str
     status: Optional[str] = None
+    district: Optional[str] = None
+    fir_year: Optional[int] = None
+    crime_head: Optional[str] = None
 
 
 class MatchedEntityItem(BaseModel):

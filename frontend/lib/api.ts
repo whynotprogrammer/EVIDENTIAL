@@ -48,6 +48,34 @@ export interface CaseItem {
   assigned_officer_id?: number;
   created_at: string;
   updated_at: string;
+  source_record_key?: string;
+  fir_year?: number;
+  fir_month?: number;
+  fir_day?: number;
+  fir_type?: string;
+  fir_stage?: string;
+  complaint_mode?: string;
+  crime_head?: string;
+  latitude?: number;
+  longitude?: number;
+  offence_duration?: string;
+  act_section?: string;
+  distance_from_ps?: string;
+  beat_name?: string;
+  village_area_name?: string;
+  male?: number;
+  female?: number;
+  boy?: number;
+  girl?: number;
+  age_0?: number;
+  victim_count?: number;
+  accused_count?: number;
+  arrested_male?: number;
+  arrested_female?: number;
+  arrested_count?: number;
+  accused_chargesheeted_count?: number;
+  conviction_count?: number;
+  unit_id?: string;
 }
 
 export interface CaseCreatePayload {
@@ -149,11 +177,22 @@ export async function getCurrentUser(): Promise<UserProfile> {
   return res.json();
 }
 
-export async function getCases(params?: { search?: string; status?: string; crime_type?: string }): Promise<CaseItem[]> {
+export async function getCases(params?: {
+  search?: string; status?: string; crime_type?: string; district?: string;
+  police_station?: string; crime_head?: string; fir_year?: number; fir_stage?: string;
+  skip?: number; limit?: number;
+}): Promise<CaseItem[]> {
   const query = new URLSearchParams();
   if (params?.search) query.append("search", params.search);
   if (params?.status) query.append("status", params.status);
   if (params?.crime_type) query.append("crime_type", params.crime_type);
+  if (params?.district) query.append("district", params.district);
+  if (params?.police_station) query.append("police_station", params.police_station);
+  if (params?.crime_head) query.append("crime_head", params.crime_head);
+  if (params?.fir_year) query.append("fir_year", String(params.fir_year));
+  if (params?.fir_stage) query.append("fir_stage", params.fir_stage);
+  if (params?.skip !== undefined) query.append("skip", String(params.skip));
+  if (params?.limit !== undefined) query.append("limit", String(params.limit));
 
   const res = await fetch(`${API_BASE_URL}/cases?${query.toString()}`, {
     headers: getAuthHeaders(),
@@ -430,6 +469,9 @@ export interface CorrelationResult {
     title: string;
     crime_type: string;
     status?: string;
+    district?: string;
+    fir_year?: number;
+    crime_head?: string;
   };
   related_case: {
     id: number;
@@ -437,6 +479,9 @@ export interface CorrelationResult {
     title: string;
     crime_type: string;
     status?: string;
+    district?: string;
+    fir_year?: number;
+    crime_head?: string;
   };
   correlation_score: number;
   matching_entities: MatchedEntityItem[];
@@ -568,17 +613,26 @@ export async function queryCopilot(
   caseId: number,
   question: string
 ): Promise<CopilotQueryResponse> {
-  const res = await fetch(`${API_BASE_URL}/copilot/query`, {
-    method: "POST",
-    headers: {
-      ...getAuthHeaders(),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ case_id: caseId, question }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/copilot/query`, {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ case_id: caseId, question }),
+    });
+  } catch {
+    throw new Error("Unable to connect to the AI backend.");
+  }
   if (!res.ok) {
+    if (res.status === 401) throw new Error("Please sign in to use the AI Copilot.");
+    if (res.status === 403) throw new Error("You are not authorized to access this FIR.");
+    if (res.status === 404) throw new Error("The selected FIR could not be found.");
+    if (res.status >= 500) throw new Error("AI service is temporarily unavailable.");
     const error = await res.json().catch(() => ({ detail: "Copilot query failed" }));
-    throw new Error(error.detail || "Failed to execute copilot query");
+    throw new Error(error.detail || "Unable to process the Copilot request.");
   }
   return res.json();
 }
@@ -586,15 +640,21 @@ export async function queryCopilot(
 export async function getCaseCopilotSummary(
   caseId: string | number
 ): Promise<CopilotCaseSummaryResponse> {
-  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/copilot/summary`, {
-    headers: getAuthHeaders(),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/cases/${caseId}/copilot/summary`, {
+      headers: getAuthHeaders(),
+    });
+  } catch {
+    throw new Error("Unable to connect to the AI backend.");
+  }
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: "Failed to fetch copilot summary" }));
-    throw new Error(error.detail || "Failed to retrieve case executive summary");
+    if (res.status === 401) throw new Error("Please sign in to use the AI Copilot.");
+    if (res.status === 403) throw new Error("You are not authorized to access this FIR.");
+    if (res.status === 404) throw new Error("The selected FIR could not be found.");
+    if (res.status >= 500) throw new Error("AI service is temporarily unavailable.");
+    const error = await res.json().catch(() => ({ detail: "Unable to load Copilot summary" }));
+    throw new Error(error.detail || "Unable to load Copilot summary.");
   }
   return res.json();
 }
-
-
-
