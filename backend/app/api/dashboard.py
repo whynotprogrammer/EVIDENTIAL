@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends # type: ignore
 from sqlalchemy import func
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -22,8 +22,10 @@ def get_dashboard_stats(
     """Provide aggregated command center metrics and distribution charts."""
     # The command-center FIR figures intentionally include only imported source
     # records, never manually created demo/investigation cases.
-    fir_query = db.query(Case).filter(Case.source_record_key != None)
-    total_cases = fir_query.count()
+    all_cases_query = db.query(Case)
+    fir_query = all_cases_query.filter(Case.source_record_key != None)
+
+    total_cases = all_cases_query.count()
     active_investigations = (
         fir_query.filter(Case.fir_stage == "Under Investigation")
         .count()
