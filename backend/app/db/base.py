@@ -6,3 +6,4 @@ from backend.app.models.entity import ExtractedEntity, EntityType  # noqa
 from backend.app.models.evidence import Evidence, EvidenceType, VerificationStatus  # noqa
 from backend.app.models.timeline_event import InvestigationEvent, EventType  # noqa
 from backend.app.models.audit import AuditEvent, AuditAction, AuditStatus  # noqa
+from backend.app.models.court_package import CourtEvidencePackage  # noqa

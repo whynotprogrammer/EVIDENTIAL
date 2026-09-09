@@ -117,7 +117,7 @@ export default function CasesPage() {
             className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black text-xs font-medium transition-colors"
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            Register New Case
+            Register Manually
           </button>
         </div>
 
@@ -161,14 +161,14 @@ export default function CasesPage() {
             <FolderGit2 className="w-8 h-8 text-zinc-600 mx-auto" />
             <h3 className="text-sm font-semibold text-white">No Investigation Cases Found</h3>
             <p className="text-xs text-mute max-w-sm mx-auto">
-              No cases matched your search query or filters. Click &quot;Register New Case&quot; to initialize a new FIR record.
+              No cases matched your search query or filters. Click &quot;Register Manually&quot; to initialize a new FIR record.
             </p>
             <button
               onClick={() => setIsCreateOpen(true)}
               className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black text-xs font-medium"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              Register New Case
+              Register Manually
             </button>
           </div>
         ) : (

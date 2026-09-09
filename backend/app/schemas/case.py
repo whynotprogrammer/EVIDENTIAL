@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 from backend.app.models.case import CasePriority, CaseStatus
 
@@ -16,6 +16,7 @@ class CaseBase(BaseModel):
     state: Optional[str] = None
     location: Optional[str] = None
     incident_date: Optional[datetime] = None
+    act_section: Optional[str] = None
 
 
 class CaseCreate(BaseModel):
@@ -30,7 +31,11 @@ class CaseCreate(BaseModel):
     state: Optional[str] = None
     location: Optional[str] = None
     incident_date: Optional[datetime] = None
+    act_section: Optional[str] = None
     assigned_officer_id: Optional[int] = None
+    registration_method: Literal["MANUAL", "AI_ASSISTED"] = "MANUAL"
+    source_document_reference: Optional[str] = None
+    extraction_metadata: Optional[Dict[str, Any]] = None
 
 
 class CaseUpdate(BaseModel):
@@ -82,6 +87,9 @@ class CaseOut(CaseBase):
     accused_chargesheeted_count: Optional[int] = None
     conviction_count: Optional[int] = None
     unit_id: Optional[str] = None
+    registration_method: Optional[str] = None
+    source_document_reference: Optional[str] = None
+    extraction_metadata: Optional[Dict[str, Any]] = None
 
     @computed_field
     def case_id(self) -> str:

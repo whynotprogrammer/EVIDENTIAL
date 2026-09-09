@@ -76,6 +76,9 @@ export interface CaseItem {
   accused_chargesheeted_count?: number;
   conviction_count?: number;
   unit_id?: string;
+  registration_method?: "MANUAL" | "AI_ASSISTED";
+  source_document_reference?: string;
+  extraction_metadata?: Record<string, unknown>;
 }
 
 export interface CaseCreatePayload {
@@ -90,6 +93,15 @@ export interface CaseCreatePayload {
   state?: string;
   location?: string;
   incident_date?: string;
+  act_section?: string;
+  registration_method?: "MANUAL" | "AI_ASSISTED";
+}
+
+export interface AiCaseExtraction {
+  filename: string;
+  fields: Record<string, any>;
+  entities: ExtractedEntityItem[];
+  metadata: Record<string, unknown>;
 }
 
 export interface CaseUpdatePayload {
@@ -145,7 +157,7 @@ export function removeStoredToken() {
   }
 }
 
-function getAuthHeaders(): HeadersInit {
+export function getAuthHeaders(): HeadersInit {
   const token = getStoredToken();
   return {
     "Content-Type": "application/json",
@@ -224,6 +236,40 @@ export async function createCase(payload: CaseCreatePayload): Promise<CaseItem> 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: "Failed to create case" }));
     throw new Error(error.detail || "Failed to create case");
+  }
+  return res.json();
+}
+
+export async function extractAiCaseIntake(file: File): Promise<AiCaseExtraction> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE_URL}/cases/ai-assisted/extract`, {
+    method: "POST",
+    headers: { Accept: "application/json", ...(getStoredToken() ? { Authorization: `Bearer ${getStoredToken()}` } : {}) },
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "AI extraction failed" }));
+    throw new Error(error.detail || "AI extraction failed");
+  }
+  return res.json();
+}
+
+export async function registerAiAssistedCase(
+  file: File, payload: CaseCreatePayload, extractionMetadata: Record<string, unknown>
+): Promise<CaseItem> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("case_data", JSON.stringify({ ...payload, registration_method: "AI_ASSISTED" }));
+  formData.append("extraction_metadata", JSON.stringify(extractionMetadata));
+  const res = await fetch(`${API_BASE_URL}/cases/ai-assisted/register`, {
+    method: "POST",
+    headers: { Accept: "application/json", ...(getStoredToken() ? { Authorization: `Bearer ${getStoredToken()}` } : {}) },
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Case registration failed" }));
+    throw new Error(error.detail || "Case registration failed");
   }
   return res.json();
 }
@@ -655,6 +701,564 @@ export async function getCaseCopilotSummary(
     if (res.status >= 500) throw new Error("AI service is temporarily unavailable.");
     const error = await res.json().catch(() => ({ detail: "Unable to load Copilot summary" }));
     throw new Error(error.detail || "Unable to load Copilot summary.");
+  }
+  return res.json();
+}
+
+// Digital Chain of Custody Types & Endpoints
+
+export type CustodyStatus =
+  | "COLLECTED"
+  | "SEALED"
+  | "TRANSFERRED"
+  | "RECEIVED"
+  | "EXAMINED"
+  | "REPORT_GENERATED"
+  | "RETURNED"
+  | "COURT_SUBMITTED";
+
+export interface CustodyEventItem {
+  id: number;
+  evidence_id: number;
+  case_id: number;
+  action: string;
+  previous_status?: string;
+  new_status: string;
+  actor_id?: number;
+  actor_name: string;
+  timestamp: string;
+  location?: string;
+  from_custodian?: string;
+  to_custodian?: string;
+  reason?: string;
+  notes?: string;
+  evidence_hash: string;
+  digital_signature?: string;
+  device_info?: string;
+  created_at: string;
+}
+
+export interface EvidenceItem {
+  id: number;
+  case_id: number;
+  evidence_number: string;
+  title: string;
+  description?: string;
+  evidence_type: string;
+  file_path?: string;
+  file_size_bytes?: number;
+  mime_type?: string;
+  sha256_hash: string;
+  status: CustodyStatus;
+  current_custodian?: string;
+  collected_by?: string;
+  collection_location?: string;
+  collection_date?: string;
+  notes?: string;
+  forensic_report_path?: string;
+  forensic_report_hash?: string;
+  is_tampered: boolean;
+  verification_status: string;
+  last_verified_at?: string;
+  uploaded_by_id?: number;
+  created_at: string;
+  updated_at: string;
+  custody_events: CustodyEventItem[];
+}
+
+export interface CustodyChainResponse {
+  evidence_id: number;
+  evidence_number: string;
+  case_id: number;
+  current_status: CustodyStatus;
+  current_custodian?: string;
+  total_events: number;
+  events: CustodyEventItem[];
+}
+
+export interface IntegrityVerificationResult {
+  evidence_id: number;
+  evidence_number: string;
+  stored_sha256: string;
+  current_sha256: string;
+  status: string;
+  is_valid: boolean;
+  verified_at: string;
+  verified_by: string;
+  message: string;
+}
+
+export async function getCaseEvidence(caseId: string | number): Promise<EvidenceItem[]> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to load case evidence" }));
+    throw new Error(error.detail || "Failed to load case evidence");
+  }
+  return res.json();
+}
+
+export async function addCaseEvidence(caseId: string | number, formData: FormData): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to add evidence" }));
+    throw new Error(error.detail || "Failed to add evidence");
+  }
+  return res.json();
+}
+
+export async function getEvidenceDetail(
+  caseId: string | number,
+  evidenceId: number
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to fetch evidence details" }));
+    throw new Error(error.detail || "Failed to fetch evidence details");
+  }
+  return res.json();
+}
+
+export async function getCustodyChain(
+  caseId: string | number,
+  evidenceId: number
+): Promise<CustodyChainResponse> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/custody-chain`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to fetch chain of custody" }));
+    throw new Error(error.detail || "Failed to fetch chain of custody");
+  }
+  return res.json();
+}
+
+export async function sealEvidence(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { reason?: string; notes?: string } = {}
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/seal`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to seal evidence" }));
+    throw new Error(error.detail || "Failed to seal evidence");
+  }
+  return res.json();
+}
+
+export async function transferEvidence(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { to_custodian: string; location?: string; reason?: string; notes?: string }
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/transfer`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to transfer evidence" }));
+    throw new Error(error.detail || "Failed to transfer evidence");
+  }
+  return res.json();
+}
+
+export async function receiveEvidence(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { received_by?: string; location?: string; condition_notes?: string } = {}
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/receive`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to receive evidence" }));
+    throw new Error(error.detail || "Failed to receive evidence");
+  }
+  return res.json();
+}
+
+export async function startExamination(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { examiner?: string; purpose?: string; notes?: string } = {}
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/start-examination`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to start examination" }));
+    throw new Error(error.detail || "Failed to start examination");
+  }
+  return res.json();
+}
+
+export async function completeExamination(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { examiner?: string; result_notes?: string } = {}
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/complete-examination`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to complete examination" }));
+    throw new Error(error.detail || "Failed to complete examination");
+  }
+  return res.json();
+}
+
+export async function attachForensicReport(
+  caseId: string | number,
+  evidenceId: number,
+  formData: FormData
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/report`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to attach forensic report" }));
+    throw new Error(error.detail || "Failed to attach forensic report");
+  }
+  return res.json();
+}
+
+export async function returnEvidence(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { to_custodian: string; location?: string; reason?: string; notes?: string }
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/return`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to return evidence" }));
+    throw new Error(error.detail || "Failed to return evidence");
+  }
+  return res.json();
+}
+
+export async function submitToCourt(
+  caseId: string | number,
+  evidenceId: number,
+  payload: { court_name: string; submission_notes?: string; notes?: string }
+): Promise<EvidenceItem> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/submit-court`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to submit evidence to court" }));
+    throw new Error(error.detail || "Failed to submit evidence to court");
+  }
+  return res.json();
+}
+
+export async function verifyEvidenceIntegrity(
+  caseId: string | number,
+  evidenceId: number
+): Promise<IntegrityVerificationResult> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/evidence/${evidenceId}/verify`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to verify evidence integrity" }));
+    throw new Error(error.detail || "Failed to verify evidence integrity");
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Court Evidence Package Types & API
+// ---------------------------------------------------------------------------
+
+export interface CourtEvidencePackageData {
+  metadata: {
+    package_id: string;
+    case_id: number;
+    case_number: string;
+    generated_at: string;
+    generated_by: string;
+    authority: string;
+    system_version: string;
+    status: string;
+    package_hash: string;
+    is_complete: boolean;
+    missing_sections: string[];
+  };
+  case_summary: {
+    case_id: number;
+    case_number: string;
+    title: string;
+    crime_type: string;
+    priority: string;
+    status: string;
+    police_station?: string;
+    district?: string;
+    state?: string;
+    location?: string;
+    incident_date?: string;
+    act_section?: string;
+    fir_year?: number;
+    crime_head?: string;
+    assigned_officer?: string;
+    created_at: string;
+  };
+  fir: {
+    available: boolean;
+    fir_number?: string;
+    fir_year?: number;
+    fir_stage?: string;
+    police_station?: string;
+    district?: string;
+    act_section?: string;
+    complaint_mode?: string;
+    incident_date?: string;
+    linked_documents: Array<{
+      document_id: number;
+      filename: string;
+      file_hash: string;
+      uploaded_at: string;
+    }>;
+    empty_message?: string;
+  };
+  witness_statements: {
+    available: boolean;
+    count: number;
+    statements: Array<{
+      witness_name: string;
+      role_or_type: string;
+      statement_date: string;
+      summary: string;
+      recorded_by: string;
+      document_ref?: string;
+      document_hash?: string;
+    }>;
+    empty_message?: string;
+  };
+  evidence_register: {
+    available: boolean;
+    count: number;
+    items: Array<{
+      evidence_id: number;
+      evidence_number: string;
+      title: string;
+      evidence_type: string;
+      original_sha256: string;
+      current_sha256: string;
+      custody_status: string;
+      current_custodian: string;
+      storage_location: string;
+      verification_status: string;
+      is_tampered: boolean;
+      collection_date?: string;
+      seized_from?: string;
+      device_make_model?: string;
+      serial_number?: string;
+    }>;
+    empty_message?: string;
+  };
+  forensic_reports: {
+    available: boolean;
+    count: number;
+    reports: Array<{
+      evidence_id: number;
+      evidence_number: string;
+      evidence_title: string;
+      report_filename: string;
+      report_hash: string;
+      attached_by: string;
+      attached_at: string;
+      summary?: string;
+    }>;
+    empty_message?: string;
+  };
+  investigation_timeline: {
+    available: boolean;
+    count: number;
+    events: Array<{
+      id: number;
+      event_date: string;
+      event_type: string;
+      title: string;
+      description: string;
+      location?: string;
+    }>;
+    empty_message?: string;
+  };
+  chain_of_custody: {
+    available: boolean;
+    total_events: number;
+    items: Array<{
+      evidence_id: number;
+      evidence_number: string;
+      title: string;
+      current_status: string;
+      current_custodian?: string;
+      total_events: number;
+      events: Array<{
+        action: string;
+        who: string;
+        when: string;
+        where?: string;
+        from_custodian?: string;
+        to_custodian?: string;
+        why?: string;
+        evidence_hash: string;
+        digital_signature?: string;
+        device_info?: string;
+      }>;
+    }>;
+    empty_message?: string;
+  };
+  integrity_certificates: {
+    available: boolean;
+    count: number;
+    all_valid: boolean;
+    certificates: Array<{
+      evidence_id: number;
+      evidence_number: string;
+      title: string;
+      original_sha256: string;
+      current_sha256: string;
+      status: string;
+      is_valid: boolean;
+      verified_at: string;
+      certifying_authority: string;
+      integrity_declaration: string;
+    }>;
+    empty_message?: string;
+  };
+  digital_signatures: {
+    available: boolean;
+    total_signatures: number;
+    signatures: Array<{
+      item_type: string;
+      item_identifier: string;
+      signer_name: string;
+      signer_role: string;
+      timestamp: string;
+      signature_hash: string;
+      algorithm: string;
+    }>;
+    empty_message?: string;
+  };
+  audit_certificate: {
+    certificate_id: string;
+    case_number: string;
+    total_audit_events: number;
+    chain_of_custody_status: string;
+    integrity_declaration: string;
+    certified_by: string;
+    certified_at: string;
+    legal_statute_reference: string;
+  };
+}
+
+export interface CourtEvidencePackageOut {
+  id: number;
+  package_id: string;
+  case_id: number;
+  generated_by_name: string;
+  status: string;
+  package_hash: string;
+  is_complete: boolean;
+  created_at: string;
+  package_data: CourtEvidencePackageData;
+}
+
+export interface CourtPackageReadiness {
+  case_id: number;
+  case_number: string;
+  case_summary_status: string;
+  fir_status: string;
+  witness_statements_status: string;
+  evidence_register_status: string;
+  forensic_reports_status: string;
+  investigation_timeline_status: string;
+  chain_of_custody_status: string;
+  integrity_certificates_status: string;
+  digital_signatures_status: string;
+  audit_certificate_status: string;
+  is_package_complete: boolean;
+  missing_sections: string[];
+  preview: CourtEvidencePackageData;
+}
+
+export async function getCourtPackageReadiness(
+  caseId: string | number
+): Promise<CourtPackageReadiness> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/court-package/readiness`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to evaluate court package readiness" }));
+    throw new Error(error.detail || "Failed to evaluate court package readiness");
+  }
+  return res.json();
+}
+
+export async function generateCourtPackage(
+  caseId: string | number
+): Promise<CourtEvidencePackageOut> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/court-package`, {
+    method: "POST",
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to generate court evidence package" }));
+    throw new Error(error.detail || "Failed to generate court evidence package");
+  }
+  return res.json();
+}
+
+export async function getLatestCourtPackage(
+  caseId: string | number
+): Promise<CourtEvidencePackageOut | null> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/court-package/latest`, {
+    headers: getAuthHeaders(),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to fetch latest court package" }));
+    throw new Error(error.detail || "Failed to fetch latest court package");
+  }
+  return res.json();
+}
+
+export async function getCourtPackageById(
+  caseId: string | number,
+  packageId: string
+): Promise<CourtEvidencePackageOut> {
+  const res = await fetch(`${API_BASE_URL}/cases/${caseId}/court-package/${packageId}`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: "Failed to fetch court package" }));
+    throw new Error(error.detail || "Failed to fetch court package");
   }
   return res.json();
 }

@@ -74,6 +74,12 @@ class Case(Base):
     unit_id = Column(String(64), nullable=True)
     source_payload = Column(JSON, nullable=True)
 
+    # Registration provenance.  Kept with the operational case record so both
+    # manual and AI-assisted registrations share the same case system.
+    registration_method = Column(String(32), nullable=False, default="MANUAL")
+    source_document_reference = Column(String(512), nullable=True)
+    extraction_metadata = Column(JSON, nullable=True)
+
     # Ownership & Creator
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_by_user = relationship("User", foreign_keys=[created_by_id])

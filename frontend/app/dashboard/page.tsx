@@ -120,7 +120,7 @@ export default function DashboardPage() {
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black text-xs font-medium transition-colors"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                Register New Case
+                Register Manually
               </button>
             )}
           </div>
@@ -194,7 +194,7 @@ export default function DashboardPage() {
               </div>
             ) : recentCases.length === 0 ? (
               <div className="py-8 text-center text-xs text-mute">
-                No cases registered yet. Click &quot;Register New Case&quot; above.
+                No cases registered yet. Use &quot;Register Manually&quot; above or + New Case for AI-assisted registration.
               </div>
             ) : (
               <div className="space-y-2">

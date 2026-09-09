@@ -15,17 +15,18 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CaseCreatePayload>({
-    case_number: `FIR-${new Date().getFullYear()}-DL-${Math.floor(1000 + Math.random() * 9000)}`,
+    case_number: "",
     title: "",
     description: "",
-    crime_type: "Cyber Financial Fraud",
+    crime_type: "",
     priority: "HIGH",
     status: "UNDER_INVESTIGATION",
     location: "",
-    police_station: "Central Cyber Crime Cell",
-    district: "New Delhi",
-    state: "Delhi",
-    incident_date: new Date().toISOString().split("T")[0],
+    police_station: "",
+    district: "",
+    state: "",
+    incident_date: "",
+    registration_method: "MANUAL",
   });
 
   if (!isOpen) return null;
@@ -57,8 +58,8 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
       <div className="bg-canvas-elevated border border-hairline rounded-md max-w-2xl w-full p-6 overflow-y-auto max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-hairline pb-4 mb-5">
           <div>
-            <h2 className="text-base font-semibold text-white">Register Investigation Case</h2>
-            <p className="text-xs text-mute">Initialize a new FIR record into the secure case registry</p>
+            <h2 className="text-base font-semibold text-white">Manual Case Registration</h2>
+            <p className="text-xs text-mute">Enter verified case information directly into the secure case registry</p>
           </div>
           <button
             onClick={onClose}
@@ -92,10 +93,12 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
             <div>
               <label className="block text-zinc-300 font-medium mb-1">Crime Classification *</label>
               <select
+                required
                 value={formData.crime_type}
                 onChange={(e) => setFormData({ ...formData, crime_type: e.target.value })}
                 className="w-full bg-zinc-950 border border-hairline rounded-sm px-3 py-1.5 text-white focus:outline-none focus:border-zinc-500"
               >
+                <option value="">Select crime classification</option>
                 <option value="Cyber Financial Fraud">Cyber Financial Fraud</option>
                 <option value="Ransomware & Extortion">Ransomware & Extortion</option>
                 <option value="Critical Infrastructure Attack">Critical Infrastructure Attack</option>
@@ -209,7 +212,7 @@ export default function CreateCaseModal({ isOpen, onClose, onSuccess }: CreateCa
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black font-medium transition disabled:opacity-50"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-              Create Case
+              Register Manually
             </button>
           </div>
         </form>

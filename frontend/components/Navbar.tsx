@@ -110,13 +110,13 @@ export default function Navbar({ user, onNewCase, onLogout }: NavbarProps) {
 
         <div className="flex items-center gap-2.5">
           {onNewCase && (
-            <button
-              onClick={onNewCase}
+            <Link
+              href="/ai-case-registration"
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-sm bg-white hover:bg-zinc-200 text-black transition-colors"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              New Case
-            </button>
+              + New Case
+            </Link>
           )}
 
           {user ? (

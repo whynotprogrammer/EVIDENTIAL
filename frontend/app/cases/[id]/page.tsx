@@ -36,8 +36,23 @@ import {
   CalendarDays,
   Plus,
   Compass,
+  Lock,
+  Unlock,
+  Send,
+  Inbox,
+  Microscope,
+  FileCheck2,
+  RotateCcw,
+  Landmark,
+  ShieldCheck,
+  ShieldAlert,
+  Layers,
+  Eye,
+  Activity,
+  Scale,
 } from "lucide-react";
 import Navbar from "../../../components/Navbar";
+import CourtPackageModal from "../../../components/CourtPackageModal";
 import {
   CaseItem,
   DocumentItem,
@@ -55,6 +70,24 @@ import {
   getCaseTimeline,
   createTimelineEvent,
   TimelineEventItem,
+  EvidenceItem,
+  CustodyEventItem,
+  CustodyChainResponse,
+  IntegrityVerificationResult,
+  CourtEvidencePackageOut,
+  getLatestCourtPackage,
+  getCaseEvidence,
+  addCaseEvidence,
+  getCustodyChain,
+  sealEvidence,
+  transferEvidence,
+  receiveEvidence,
+  startExamination,
+  completeExamination,
+  attachForensicReport,
+  returnEvidence,
+  submitToCourt,
+  verifyEvidenceIntegrity,
 } from "../../../lib/api";
 
 export default function CaseDetailPage() {
@@ -94,11 +127,11 @@ export default function CaseDetailPage() {
   const [inspectDoc, setInspectDoc] = useState<DocumentItem | null>(null);
   const [inspectTab, setInspectTab] = useState<"entities" | "text" | "translation">("entities");
 
-  // Cross-FIR Correlation State (Phase 7)
+  // Cross-FIR Correlation State
   const [correlations, setCorrelations] = useState<CorrelationResult[]>([]);
   const [correlationsLoading, setCorrelationsLoading] = useState(false);
 
-  // Investigation Timeline State (Phase 8)
+  // Investigation Timeline State
   const [timelineEvents, setTimelineEvents] = useState<TimelineEventItem[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timelineOrder, setTimelineOrder] = useState<"asc" | "desc">("asc");
@@ -110,6 +143,164 @@ export default function CaseDetailPage() {
   const [milestoneLocation, setMilestoneLocation] = useState("");
   const [milestoneDocId, setMilestoneDocId] = useState<string>("");
   const [creatingMilestone, setCreatingMilestone] = useState(false);
+
+  // Digital Chain of Custody State (Part 1)
+  const [evidenceList, setEvidenceList] = useState<EvidenceItem[]>([]);
+  const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [showAddEvidenceModal, setShowAddEvidenceModal] = useState(false);
+  const [evTitle, setEvTitle] = useState("");
+  const [evDescription, setEvDescription] = useState("");
+  const [evType, setEvType] = useState("DIGITAL_FILE");
+  const [evLocation, setEvLocation] = useState("");
+  const [evNotes, setEvNotes] = useState("");
+  const [evFile, setEvFile] = useState<File | null>(null);
+  const [addingEvidence, setAddingEvidence] = useState(false);
+
+  // Custody Chain View Modal
+  const [custodyChainData, setCustodyChainData] = useState<CustodyChainResponse | null>(null);
+  const [loadingCustodyChain, setLoadingCustodyChain] = useState(false);
+  const [showChainModal, setShowChainModal] = useState(false);
+
+  // Integrity Verification Modal
+  const [integrityData, setIntegrityData] = useState<IntegrityVerificationResult | null>(null);
+  const [verifyingIntegrity, setVerifyingIntegrity] = useState(false);
+
+  // Custody Workflow Transition Modal State
+  const [activeTransition, setActiveTransition] = useState<{
+    item: EvidenceItem;
+    action: "SEAL" | "TRANSFER" | "RECEIVE" | "START_EXAM" | "COMPLETE_EXAM" | "REPORT" | "RETURN" | "COURT";
+  } | null>(null);
+  const [transField1, setTransField1] = useState("");
+  const [transField2, setTransField2] = useState("");
+  const [transNotes, setTransNotes] = useState("");
+  const [transFile, setTransFile] = useState<File | null>(null);
+  const [submittingTransition, setSubmittingTransition] = useState(false);
+
+  // Court Evidence Package State
+  const [showCourtPackageModal, setShowCourtPackageModal] = useState(false);
+  const [courtPackageMode, setCourtPackageMode] = useState<"review" | "viewer">("review");
+  const [latestCourtPackage, setLatestCourtPackage] = useState<CourtEvidencePackageOut | null>(null);
+
+  const fetchLatestCourtPackage = async () => {
+    try {
+      const pkg = await getLatestCourtPackage(caseId);
+      setLatestCourtPackage(pkg);
+    } catch {
+      // Package may not exist yet
+    }
+  };
+
+  const fetchEvidence = async () => {
+    setEvidenceLoading(true);
+    try {
+      const data = await getCaseEvidence(caseId);
+      setEvidenceList(data);
+    } catch (err: any) {
+      console.error("Failed to load case evidence:", err);
+    } finally {
+      setEvidenceLoading(false);
+    }
+  };
+
+  const handleAddEvidenceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!evTitle.trim()) return;
+    setAddingEvidence(true);
+    try {
+      const formData = new FormData();
+      formData.append("title", evTitle.trim());
+      if (evDescription) formData.append("description", evDescription.trim());
+      formData.append("evidence_type", evType);
+      if (evLocation) formData.append("collection_location", evLocation.trim());
+      if (evNotes) formData.append("notes", evNotes.trim());
+      if (evFile) formData.append("file", evFile);
+
+      await addCaseEvidence(caseId, formData);
+      setShowAddEvidenceModal(false);
+      setEvTitle("");
+      setEvDescription("");
+      setEvLocation("");
+      setEvNotes("");
+      setEvFile(null);
+      await fetchEvidence();
+      await fetchTimeline();
+    } catch (err: any) {
+      alert(err.message || "Failed to register evidence");
+    } finally {
+      setAddingEvidence(false);
+    }
+  };
+
+  const handleOpenChainModal = async (evidenceId: number) => {
+    setShowChainModal(true);
+    setLoadingCustodyChain(true);
+    setCustodyChainData(null);
+    try {
+      const chain = await getCustodyChain(caseId, evidenceId);
+      setCustodyChainData(chain);
+    } catch (err: any) {
+      alert(err.message || "Failed to load chain of custody");
+      setShowChainModal(false);
+    } finally {
+      setLoadingCustodyChain(false);
+    }
+  };
+
+  const handleVerifyIntegrity = async (evidenceId: number) => {
+    setVerifyingIntegrity(true);
+    setIntegrityData(null);
+    try {
+      const res = await verifyEvidenceIntegrity(caseId, evidenceId);
+      setIntegrityData(res);
+      await fetchEvidence();
+    } catch (err: any) {
+      alert(err.message || "Integrity verification failed");
+    } finally {
+      setVerifyingIntegrity(false);
+    }
+  };
+
+  const handleExecuteTransition = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeTransition) return;
+    setSubmittingTransition(true);
+    const { item, action } = activeTransition;
+    try {
+      if (action === "SEAL") {
+        await sealEvidence(caseId, item.id, { reason: transField1 || undefined, notes: transNotes || undefined });
+      } else if (action === "TRANSFER") {
+        await transferEvidence(caseId, item.id, { to_custodian: transField1, location: transField2 || undefined, notes: transNotes || undefined });
+      } else if (action === "RECEIVE") {
+        await receiveEvidence(caseId, item.id, { received_by: transField1 || undefined, location: transField2 || undefined, condition_notes: transNotes || undefined });
+      } else if (action === "START_EXAM") {
+        await startExamination(caseId, item.id, { examiner: transField1 || undefined, purpose: transField2 || undefined, notes: transNotes || undefined });
+      } else if (action === "COMPLETE_EXAM") {
+        await completeExamination(caseId, item.id, { examiner: transField1 || undefined, result_notes: transNotes || undefined });
+      } else if (action === "REPORT") {
+        const formData = new FormData();
+        if (transField1) formData.append("report_title", transField1);
+        if (transField2) formData.append("findings", transField2);
+        if (transNotes) formData.append("notes", transNotes);
+        if (transFile) formData.append("file", transFile);
+        await attachForensicReport(caseId, item.id, formData);
+      } else if (action === "RETURN") {
+        await returnEvidence(caseId, item.id, { to_custodian: transField1, location: transField2 || undefined, notes: transNotes || undefined });
+      } else if (action === "COURT") {
+        await submitToCourt(caseId, item.id, { court_name: transField1, submission_notes: transField2 || undefined, notes: transNotes || undefined });
+      }
+      setActiveTransition(null);
+      setTransField1("");
+      setTransField2("");
+      setTransNotes("");
+      setTransFile(null);
+      await fetchEvidence();
+      await fetchTimeline();
+    } catch (err: any) {
+      alert(err.message || "Failed to execute custody transition");
+    } finally {
+      setSubmittingTransition(false);
+    }
+  };
 
   const fetchCorrelations = async () => {
     setCorrelationsLoading(true);
@@ -198,10 +389,12 @@ export default function CaseDetailPage() {
       setEditTitle(data.title);
       setEditDescription(data.description || "");
       setEditLocation(data.location || "");
-      // Fetch documents, correlations & timeline for this case
+
+      fetchEvidence();
       fetchDocuments();
       fetchCorrelations();
       fetchTimeline();
+      fetchLatestCourtPackage();
     } catch (err: any) {
       setError(err.message || "Failed to load case");
     } finally {
@@ -351,138 +544,158 @@ export default function CaseDetailPage() {
             FAILED
           </span>
         );
-      case "PENDING":
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/80 border border-amber-700 text-amber-300">
-            <Clock className="w-3 h-3 text-amber-400" />
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 border border-slate-700 text-slate-300">
+            <Clock className="w-3 h-3 text-slate-400" />
             PENDING
           </span>
         );
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getCustodyStatusBadge = (status: string) => {
     switch (status) {
-      case "UNDER_INVESTIGATION":
-        return "bg-amber-950/60 border-amber-800 text-amber-300";
-      case "OPEN":
-        return "bg-blue-950/60 border-blue-800 text-blue-300";
-      case "PENDING_REVIEW":
-        return "bg-purple-950/60 border-purple-800 text-purple-300";
-      case "CLOSED":
-        return "bg-emerald-950/60 border-emerald-800 text-emerald-300";
+      case "COLLECTED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-950/80 border border-sky-800 text-sky-300">COLLECTED</span>;
+      case "SEALED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/80 border border-amber-800 text-amber-300">SEALED</span>;
+      case "TRANSFERRED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-950/80 border border-blue-800 text-blue-300">TRANSFERRED</span>;
+      case "RECEIVED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-950/80 border border-indigo-800 text-indigo-300">RECEIVED</span>;
+      case "EXAMINED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-950/80 border border-purple-800 text-purple-300">EXAMINED</span>;
+      case "REPORT_GENERATED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-950/80 border border-teal-800 text-teal-300">REPORT GENERATED</span>;
+      case "RETURNED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-950/80 border border-orange-800 text-orange-300">RETURNED</span>;
+      case "COURT_SUBMITTED":
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 border border-emerald-700 text-emerald-300">COURT SUBMITTED</span>;
       default:
-        return "bg-slate-800 border-slate-700 text-slate-300";
+        return <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 border border-slate-700 text-slate-300">{status}</span>;
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100">
-      <Navbar user={user} />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+      <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Breadcrumb Navigation */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between">
           <Link
             href="/cases"
-            className="inline-flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-white transition"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition group"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:-translate-x-1 transition-transform" />
             Back to Case Directory
           </Link>
 
-          {caseData && !isEditing && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 transition"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                Upload FIR Document
-              </button>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-blue-400" />
-                Update Metadata
-              </button>
+          {saveSuccess && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-950 border border-emerald-800 rounded-full text-xs font-semibold text-emerald-300 animate-fade-in">
+              <Check className="w-3.5 h-3.5" />
+              Case Dossier Updated
             </div>
           )}
         </div>
 
         {error && (
-          <div className="p-4 rounded-xl bg-red-950/40 border border-red-900/50 flex items-center gap-3 text-xs text-red-300">
+          <div className="p-4 rounded-xl bg-red-950/80 border border-red-800 flex items-center gap-3 text-xs text-red-200">
             <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-            <div>
-              <p className="font-semibold text-red-200">Error</p>
-              <p className="mt-0.5">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {saveSuccess && (
-          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-900/50 flex items-center gap-2 text-xs text-emerald-300">
-            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-            Case metadata updated successfully via PATCH /api/v1/cases/{caseId}
+            <span>{error}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 text-slate-400">
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <p className="text-xs">Loading case dossier...</p>
+            <p className="text-xs font-medium">Loading case details...</p>
           </div>
         ) : !caseData ? (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-12 text-center">
-            <p className="text-sm text-slate-400">Case record could not be loaded.</p>
+          <div className="py-20 text-center space-y-3">
+            <FolderGit2 className="w-12 h-12 text-slate-600 mx-auto" />
+            <p className="text-sm font-semibold text-slate-300">Case Dossier Not Found</p>
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Header Card */}
+            {/* Header Banner */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs font-bold px-3 py-1 rounded-lg bg-blue-950 border border-blue-800 text-blue-300">
-                    {caseData.source_record_key ? "FIR ID: Not Available" : caseData.case_number}
-                  </span>
-                  <span className={`text-xs font-bold px-3 py-1 rounded-lg border ${getStatusBadge(caseData.status)}`}>
-                    {caseData.fir_stage || caseData.status.replace("_", " ")}
-                  </span>
-                  <span className="text-xs font-bold px-3 py-1 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300">
-                    Priority: {caseData.priority}
-                  </span>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950/80 border border-blue-800/80 px-2.5 py-0.5 rounded-full">
+                      {caseData.case_number}
+                    </span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                      {caseData.status}
+                    </span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-red-950/80 border border-red-800 text-red-300">
+                      {caseData.priority} PRIORITY
+                    </span>
+                  </div>
+
+                  {!isEditing && (
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs text-slate-400">
+                        Official FIR Investigation File • Karnataka State Police Command Network
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div className="text-[11px] text-slate-400 font-mono">
-                  Created: {new Date(caseData.created_at).toLocaleString()}
-                </div>
+                {!isEditing && (
+                  <div className="flex items-center gap-2">
+                    {latestCourtPackage && (
+                      <button
+                        onClick={() => {
+                          setCourtPackageMode("viewer");
+                          setShowCourtPackageModal(true);
+                        }}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm"
+                        title="View existing Court Evidence Dossier"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-400" />
+                        View Court Package
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setCourtPackageMode("review");
+                        setShowCourtPackageModal(true);
+                      }}
+                      className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-900/30 transition"
+                    >
+                      <Scale className="w-3.5 h-3.5 text-blue-200" />
+                      Generate Court Evidence Package
+                    </button>
+
+                    {user && (user.role === "ADMIN" || caseData.assigned_officer_id === user.id) && (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-blue-400" />
+                        Edit Dossier
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {isEditing ? (
                 <div className="space-y-4 pt-2 border-t border-slate-800">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Case Title</label>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1">Description / Summary</label>
-                    <textarea
-                      rows={3}
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Case Title</label>
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
                     <div>
                       <label className="block text-xs font-medium text-slate-300 mb-1">Status</label>
                       <select
@@ -491,12 +704,24 @@ export default function CaseDetailPage() {
                         className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200"
                       >
                         <option value="OPEN">OPEN</option>
-                        <option value="UNDER_INVESTIGATION">UNDER_INVESTIGATION</option>
-                        <option value="PENDING_REVIEW">PENDING_REVIEW</option>
+                        <option value="UNDER_INVESTIGATION">UNDER INVESTIGATION</option>
+                        <option value="PENDING_REVIEW">PENDING REVIEW</option>
                         <option value="CLOSED">CLOSED</option>
                       </select>
                     </div>
+                  </div>
 
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Description</label>
+                    <textarea
+                      rows={3}
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-slate-300 mb-1">Priority</label>
                       <select
@@ -623,7 +848,275 @@ export default function CaseDetailPage() {
               </div>
             </div>
 
-            {/* FIR Document Management Section (Phase 4) */}
+            {/* ========================================================================= */}
+            {/* PART 1 — DIGITAL CHAIN OF CUSTODY SECTION */}
+            {/* ========================================================================= */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-lg bg-emerald-950/70 border border-emerald-800/50 text-emerald-400">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white flex items-center gap-2">
+                      Digital Chain of Custody & Evidence Vault
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono">
+                        {evidenceList.length} Items Registered
+                      </span>
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      Immutable custody ledger, cryptographic SHA-256 integrity verification, and state transition workflow.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowAddEvidenceModal(true)}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  + Add Evidence
+                </button>
+              </div>
+
+              {/* Evidence List View */}
+              {evidenceLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+                  <p className="text-xs">Fetching chain of custody records...</p>
+                </div>
+              ) : evidenceList.length === 0 ? (
+                <div className="border border-dashed border-slate-800 rounded-xl p-8 text-center space-y-3 bg-slate-950/40">
+                  <div className="w-10 h-10 rounded-full bg-slate-800/80 flex items-center justify-center mx-auto text-slate-400">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-300 tracking-wider">NO EVIDENCE REGISTERED</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 max-w-md mx-auto">
+                      No digital or physical evidence items have been registered into the chain of custody for this case yet.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddEvidenceModal(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    + Add Evidence
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {evidenceList.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-5 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition space-y-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 rounded-md">
+                              {item.evidence_number}
+                            </span>
+                            {getCustodyStatusBadge(item.status)}
+                            {item.is_tampered ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-950/80 border border-red-700 text-red-300">
+                                <ShieldAlert className="w-3 h-3 text-red-400" />
+                                ⚠ TAMPERED
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 border border-emerald-700 text-emerald-300">
+                                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                ✓ INTEGRITY VERIFIED
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-sm font-bold text-white tracking-wide">{item.title}</h3>
+                          {item.description && (
+                            <p className="text-xs text-slate-300">{item.description}</p>
+                          )}
+                        </div>
+
+                        {/* Top Right Info Badges */}
+                        <div className="text-right space-y-1 text-xs">
+                          <div className="text-[11px] text-slate-400">
+                            Current Custodian: <strong className="text-slate-200">{item.current_custodian || "Unassigned"}</strong>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-500">
+                            Type: {item.evidence_type} {item.file_size_bytes ? `• ${formatFileSize(item.file_size_bytes)}` : ""}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Details Box */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">Collected By:</span>
+                          <span className="text-slate-300 font-semibold">{item.collected_by || "Investigating Officer"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">Collection Location:</span>
+                          <span className="text-slate-300">{item.collection_location || "Field Site"}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-slate-500 block">SHA-256 Hash Digest:</span>
+                          <span className="font-mono text-[10px] text-emerald-400 truncate block" title={item.sha256_hash}>
+                            {item.sha256_hash}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Dynamic Workflow Action Buttons */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-900">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* State Transition Actions */}
+                          {item.status === "COLLECTED" && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "SEAL" });
+                                setTransField1("Evidence secured and sealed in tamper-evident bag");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 text-amber-200 border border-amber-800 transition"
+                            >
+                              <Lock className="w-3.5 h-3.5 text-amber-400" />
+                              Seal Evidence
+                            </button>
+                          )}
+
+                          {(item.status === "SEALED" || item.status === "RETURNED") && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "TRANSFER" });
+                                setTransField1("State Forensic Science Laboratory");
+                                setTransField2("Central Evidence Repository");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-950/80 hover:bg-blue-900 text-blue-200 border border-blue-800 transition"
+                            >
+                              <Send className="w-3.5 h-3.5 text-blue-400" />
+                              Transfer Evidence
+                            </button>
+                          )}
+
+                          {item.status === "TRANSFERRED" && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "RECEIVE" });
+                                setTransField1(user?.full_name || "Receiving Custodian");
+                                setTransField2("Forensic Vault Desk");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 border border-indigo-800 transition"
+                            >
+                              <Inbox className="w-3.5 h-3.5 text-indigo-400" />
+                              Receive Evidence
+                            </button>
+                          )}
+
+                          {item.status === "RECEIVED" && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "START_EXAM" });
+                                setTransField1(user?.full_name || "Senior Cyber Examiner");
+                                setTransField2("Forensic Extraction and Cryptographic Validation");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800 transition"
+                            >
+                              <Microscope className="w-3.5 h-3.5 text-purple-400" />
+                              Start Examination
+                            </button>
+                          )}
+
+                          {item.status === "EXAMINED" && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setActiveTransition({ item, action: "COMPLETE_EXAM" });
+                                  setTransField1(user?.full_name || "Senior Examiner");
+                                }}
+                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-800 transition"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                                Complete Examination
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setActiveTransition({ item, action: "REPORT" });
+                                  setTransField1("Digital Forensic Analysis Report");
+                                  setTransField2("Binary structure and SHA-256 cryptographic match confirmed.");
+                                }}
+                                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-teal-950/80 hover:bg-teal-900 text-teal-200 border border-teal-800 transition"
+                              >
+                                <FileCheck2 className="w-3.5 h-3.5 text-teal-400" />
+                                Attach Forensic Report
+                              </button>
+                            </>
+                          )}
+
+                          {item.status === "REPORT_GENERATED" && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "RETURN" });
+                                setTransField1("Investigating Officer");
+                                setTransField2("Police Station Vault");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-orange-950/80 hover:bg-orange-900 text-orange-200 border border-orange-800 transition"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-orange-400" />
+                              Return Evidence
+                            </button>
+                          )}
+
+                          {item.status === "RETURNED" && (
+                            <button
+                              onClick={() => {
+                                setActiveTransition({ item, action: "COURT" });
+                                setTransField1("Principal District & Sessions Court");
+                                setTransField2("Entered into judicial custody record.");
+                              }}
+                              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-800 transition"
+                            >
+                              <Landmark className="w-3.5 h-3.5 text-emerald-400" />
+                              Submit to Court
+                            </button>
+                          )}
+
+                          {item.status === "COURT_SUBMITTED" && (
+                            <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 px-3 py-1.5 bg-emerald-950/60 border border-emerald-800/80 rounded-lg">
+                              <Landmark className="w-3.5 h-3.5" />
+                              Judicial Custody Finalized
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Always Available Action Modals */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenChainModal(item.id)}
+                            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                          >
+                            <History className="w-3.5 h-3.5 text-blue-400" />
+                            View Chain of Custody
+                          </button>
+
+                          <button
+                            onClick={() => handleVerifyIntegrity(item.id)}
+                            disabled={verifyingIntegrity}
+                            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 transition disabled:opacity-50"
+                          >
+                            {verifyingIntegrity ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            )}
+                            Verify Integrity
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* FIR Document Management Section */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -778,7 +1271,7 @@ export default function CaseDetailPage() {
               )}
             </div>
 
-            {/* Cross-FIR Potential Correlations Section (Phase 7) */}
+            {/* Cross-FIR Potential Correlations Section */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
                 <div className="flex items-center gap-2.5">
@@ -812,7 +1305,6 @@ export default function CaseDetailPage() {
                 </button>
               </div>
 
-              {/* Legal / Ethical Guardrail Notice */}
               <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-start gap-2.5 text-[11px] text-slate-400">
                 <Shield className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
                 <p>
@@ -883,7 +1375,6 @@ export default function CaseDetailPage() {
                           </div>
                         </div>
 
-                        {/* Matching Factors */}
                         {corr.matching_factors.length > 0 && (
                           <div className="space-y-1.5 pt-1">
                             <span className="text-[10px] font-mono uppercase text-slate-500 block">
@@ -900,7 +1391,6 @@ export default function CaseDetailPage() {
                           </div>
                         )}
 
-                        {/* Shared Entity Badges */}
                         {corr.matching_entities.length > 0 && (
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
                             <span className="text-[10px] font-mono text-slate-500 mr-1">Shared Identifiers:</span>
@@ -917,7 +1407,6 @@ export default function CaseDetailPage() {
                           </div>
                         )}
 
-                        {/* Explainable Narrative Box */}
                         <div className="mt-2 bg-slate-900/60 p-3 rounded-lg border border-slate-800/60 text-xs font-mono text-slate-300 whitespace-pre-line leading-relaxed">
                           {corr.explanation}
                         </div>
@@ -928,7 +1417,7 @@ export default function CaseDetailPage() {
               )}
             </div>
 
-            {/* Investigation Timeline Section (Phase 8) */}
+            {/* Investigation Timeline Section */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
                 <div className="flex items-center gap-2.5">
@@ -943,7 +1432,7 @@ export default function CaseDetailPage() {
                       </span>
                     </h2>
                     <p className="text-[11px] text-slate-400">
-                      Chronological chain-of-events synthesized from authorized FIR registration, evidence uploads, AI extractions, and investigation logs.
+                      Chronological chain-of-events synthesized from authorized FIR registration, evidence uploads, AI extractions, and custody transitions.
                     </p>
                   </div>
                 </div>
@@ -971,15 +1460,13 @@ export default function CaseDetailPage() {
                 </div>
               </div>
 
-              {/* Source-grounded verification banner */}
               <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center gap-2 text-[11px] text-slate-400">
                 <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
-                  <strong className="text-slate-200">Zero-Hallucination Grounding:</strong> Every timeline event is backed by an authentic source document, case record, or logged officer milestone.
+                  <strong className="text-slate-200">Zero-Hallucination Grounding:</strong> Every timeline event is backed by an authentic source document, case record, or logged custody action.
                 </span>
               </div>
 
-              {/* Vertical Timeline */}
               {timelineLoading ? (
                 <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
                   <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
@@ -1007,6 +1494,7 @@ export default function CaseDetailPage() {
                           return { badge: "bg-emerald-950/80 border-emerald-800 text-emerald-300", dot: "bg-emerald-500 ring-emerald-950" };
                         case "EVIDENCE_ADDED":
                         case "EVIDENCE_TRANSFER":
+                        case "CUSTODY_CHANGE":
                           return { badge: "bg-cyan-950/80 border-cyan-800 text-cyan-300", dot: "bg-cyan-500 ring-cyan-950" };
                         default:
                           return { badge: "bg-indigo-950/80 border-indigo-800 text-indigo-300", dot: "bg-indigo-500 ring-indigo-950" };
@@ -1017,12 +1505,10 @@ export default function CaseDetailPage() {
 
                     return (
                       <div key={evt.id || idx} className="relative group">
-                        {/* Dot indicator */}
                         <div
                           className={`absolute -left-[27px] top-1.5 w-3 h-3 rounded-full ${styles.dot} ring-4 transition group-hover:scale-125`}
                         />
 
-                        {/* Event Card */}
                         <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-xl hover:border-slate-700 transition space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
@@ -1052,7 +1538,6 @@ export default function CaseDetailPage() {
                             </div>
                           )}
 
-                          {/* Source Attribution Tag */}
                           <div className="pt-2 border-t border-slate-900 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
                             <div className="flex items-center gap-1.5">
                               <span>Source:</span>
@@ -1072,6 +1557,524 @@ export default function CaseDetailPage() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODALS SECTION */}
+        {/* ========================================================================= */}
+
+        {/* 1. Add Evidence Modal */}
+        {showAddEvidenceModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Register Evidence into Chain of Custody</h3>
+                    <p className="text-[11px] text-slate-400">Generates immutable SHA-256 fingerprint & initial custody log</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddEvidenceModal(false)}
+                  className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-slate-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleAddEvidenceSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Evidence Title / Identifier <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={evTitle}
+                    onChange={(e) => setEvTitle(e.target.value)}
+                    placeholder="e.g. Seized Mobile Handset / Hard Disk Image / CCTV Footage"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Evidence Type</label>
+                    <select
+                      value={evType}
+                      onChange={(e) => setEvType(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200"
+                    >
+                      <option value="DIGITAL_FILE">DIGITAL FILE</option>
+                      <option value="PHYSICAL_ITEM">PHYSICAL ITEM</option>
+                      <option value="FORENSIC_IMAGE">FORENSIC IMAGE</option>
+                      <option value="MOBILE_EXTRACTION">MOBILE EXTRACTION</option>
+                      <option value="DOCUMENT">DOCUMENT</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Collection Location</label>
+                    <input
+                      type="text"
+                      value={evLocation}
+                      onChange={(e) => setEvLocation(e.target.value)}
+                      placeholder="e.g. Crime Scene Alpha / Vault"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Description</label>
+                  <textarea
+                    rows={2}
+                    value={evDescription}
+                    onChange={(e) => setEvDescription(e.target.value)}
+                    placeholder="Provide serial numbers, make/model, physical condition..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Upload Real Evidence File (Optional)</label>
+                  <input
+                    type="file"
+                    onChange={(e) => setEvFile(e.target.files?.[0] || null)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Initial Custody Notes</label>
+                  <input
+                    type="text"
+                    value={evNotes}
+                    onChange={(e) => setEvNotes(e.target.value)}
+                    placeholder="Seized under formal memo and sealed."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddEvidenceModal(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingEvidence}
+                    className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {addingEvidence ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                    <span>Register Evidence</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 2. Chain of Custody Timeline Modal */}
+        {showChainModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+              <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-950 border border-blue-800 text-blue-400">
+                    <History className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      Immutable Chain of Custody History
+                      {custodyChainData && (
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300">
+                          {custodyChainData.evidence_number}
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-[11px] text-slate-400">Verifiable chronological audit log of all physical and digital transfers</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowChainModal(false)}
+                  className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-slate-800"
+                >
+                  ✕ Close
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {loadingCustodyChain ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                    <p className="text-xs">Reading immutable custody log...</p>
+                  </div>
+                ) : !custodyChainData || custodyChainData.events.length === 0 ? (
+                  <div className="border border-dashed border-slate-800 rounded-xl p-8 text-center space-y-2 bg-slate-950/40">
+                    <p className="text-xs font-bold text-slate-300">NO CUSTODY EVENTS AVAILABLE</p>
+                    <p className="text-[11px] text-slate-500">No status transitions recorded for this item yet.</p>
+                  </div>
+                ) : (
+                  <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-3 before:bottom-3 before:w-0.5 before:bg-blue-800">
+                    {custodyChainData.events.map((evt) => (
+                      <div key={evt.id} className="relative group">
+                        <div className="absolute -left-[27px] top-1.5 w-3 h-3 rounded-full bg-blue-500 ring-4 ring-blue-950" />
+                        <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-xl space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-blue-300">
+                                {evt.action.replace(/_/g, " ")}
+                              </span>
+                              <span className="text-xs font-bold text-white">
+                                {evt.previous_status ? `${evt.previous_status} → ${evt.new_status}` : evt.new_status}
+                              </span>
+                            </div>
+                            <span className="text-[11px] font-mono text-slate-400">
+                              {new Date(evt.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-900/60 p-3 rounded-lg border border-slate-800/60">
+                            <div>
+                              <span className="text-[10px] font-mono text-slate-500 block">Who (Actor):</span>
+                              <span className="text-slate-200 font-semibold">{evt.actor_name}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono text-slate-500 block">Where (Location):</span>
+                              <span className="text-slate-200">{evt.location || "Field / Vault"}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono text-slate-500 block">From:</span>
+                              <span className="text-slate-300">{evt.from_custodian || "N/A"}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-mono text-slate-500 block">To:</span>
+                              <span className="text-slate-300">{evt.to_custodian || "N/A"}</span>
+                            </div>
+                          </div>
+
+                          {evt.reason && (
+                            <p className="text-xs text-slate-300">
+                              <strong className="text-slate-400">Reason / Why:</strong> {evt.reason}
+                            </p>
+                          )}
+
+                          <div className="pt-2 border-t border-slate-900 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500">
+                            <div>
+                              <span>SHA-256 Digest: </span>
+                              <span className="text-emerald-400">{evt.evidence_hash.substring(0, 16)}...</span>
+                            </div>
+                            <div>
+                              <span>Sig: </span>
+                              <span className="text-blue-400">{evt.digital_signature}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. Real Cryptographic Integrity Verification Result Modal */}
+        {integrityData && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  {integrityData.is_valid ? (
+                    <div className="p-2 rounded-lg bg-emerald-950 border border-emerald-800 text-emerald-400">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded-lg bg-red-950 border border-red-800 text-red-400">
+                      <ShieldAlert className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-sm font-bold text-white">SHA-256 Cryptographic Verification</h3>
+                    <p className="text-[11px] font-mono text-slate-400">{integrityData.evidence_number}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIntegrityData(null)}
+                  className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-slate-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Status Outcome Banner */}
+              <div className={`p-4 rounded-xl border flex items-center gap-3 ${
+                integrityData.is_valid
+                  ? "bg-emerald-950/80 border-emerald-800 text-emerald-200"
+                  : "bg-red-950/80 border-red-800 text-red-200"
+              }`}>
+                {integrityData.is_valid ? (
+                  <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+                ) : (
+                  <XCircle className="w-6 h-6 text-red-400 shrink-0" />
+                )}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider">{integrityData.status}</h4>
+                  <p className="text-[11px] mt-0.5 opacity-90">{integrityData.message}</p>
+                </div>
+              </div>
+
+              {/* Hash Comparison Table */}
+              <div className="space-y-2 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase block">Original Recorded Digest:</span>
+                  <span className="text-slate-300 text-[11px] break-all">{integrityData.stored_sha256}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-900">
+                  <span className="text-[10px] text-slate-500 uppercase block">Live Disk File Digest:</span>
+                  <span className={`text-[11px] break-all ${integrityData.is_valid ? "text-emerald-400" : "text-red-400 font-bold"}`}>
+                    {integrityData.current_sha256}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 pt-1">
+                <span>Verified by: {integrityData.verified_by}</span>
+                <span>At: {new Date(integrityData.verified_at).toLocaleTimeString()}</span>
+              </div>
+
+              <div className="flex justify-end pt-2 border-t border-slate-800">
+                <button
+                  onClick={() => setIntegrityData(null)}
+                  className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
+                >
+                  Close Verification Window
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 4. Active Workflow Transition Action Modal */}
+        {activeTransition && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-blue-950 border border-blue-800 text-blue-400">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Execute Custody Action: {activeTransition.action}</h3>
+                    <p className="text-[11px] font-mono text-slate-400">{activeTransition.item.evidence_number}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTransition(null)}
+                  className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-slate-800"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleExecuteTransition} className="space-y-3">
+                {activeTransition.action === "SEAL" && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Reason for Sealing</label>
+                    <input
+                      type="text"
+                      value={transField1}
+                      onChange={(e) => setTransField1(e.target.value)}
+                      placeholder="Evidence secured and sealed for chain of custody"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+                )}
+
+                {(activeTransition.action === "TRANSFER" || activeTransition.action === "RETURN") && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                        Recipient / To Custodian <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={transField1}
+                        onChange={(e) => setTransField1(e.target.value)}
+                        placeholder="e.g. State Forensic Lab / Inspector V. Sharma"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Transfer Location</label>
+                      <input
+                        type="text"
+                        value={transField2}
+                        onChange={(e) => setTransField2(e.target.value)}
+                        placeholder="e.g. Forensic Intake Desk / Vault 2"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTransition.action === "RECEIVE" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Received By Custodian Name</label>
+                      <input
+                        type="text"
+                        value={transField1}
+                        onChange={(e) => setTransField1(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Receiving Location</label>
+                      <input
+                        type="text"
+                        value={transField2}
+                        onChange={(e) => setTransField2(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTransition.action === "START_EXAM" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Examiner Name</label>
+                      <input
+                        type="text"
+                        value={transField1}
+                        onChange={(e) => setTransField1(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Purpose of Examination</label>
+                      <input
+                        type="text"
+                        value={transField2}
+                        onChange={(e) => setTransField2(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTransition.action === "COMPLETE_EXAM" && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1">Examiner Name</label>
+                    <input
+                      type="text"
+                      value={transField1}
+                      onChange={(e) => setTransField1(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                    />
+                  </div>
+                )}
+
+                {activeTransition.action === "REPORT" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Report Title</label>
+                      <input
+                        type="text"
+                        value={transField1}
+                        onChange={(e) => setTransField1(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Summary Findings</label>
+                      <input
+                        type="text"
+                        value={transField2}
+                        onChange={(e) => setTransField2(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Forensic Report PDF / Document File</label>
+                      <input
+                        type="file"
+                        onChange={(e) => setTransFile(e.target.files?.[0] || null)}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-300 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-800 file:text-slate-200"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {activeTransition.action === "COURT" && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">
+                        Judicial Court Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={transField1}
+                        onChange={(e) => setTransField1(e.target.value)}
+                        placeholder="e.g. Principal Sessions Court / Special Cyber Court"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1">Submission Notes</label>
+                      <input
+                        type="text"
+                        value={transField2}
+                        onChange={(e) => setTransField2(e.target.value)}
+                        placeholder="Entered into official court evidence registry"
+                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1">Additional Notes</label>
+                  <textarea
+                    rows={2}
+                    value={transNotes}
+                    onChange={(e) => setTransNotes(e.target.value)}
+                    placeholder="Enter any additional custody notes or memo references..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTransition(null)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingTransition}
+                    className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {submittingTransition ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Confirm & Record Transition</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -1255,7 +2258,6 @@ export default function CaseDetailPage() {
                 </div>
               )}
 
-              {/* Dropzone Area */}
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-950/60 hover:bg-slate-950/90 group"
@@ -1287,7 +2289,6 @@ export default function CaseDetailPage() {
                 )}
               </div>
 
-              {/* Upload Progress Bar */}
               {uploading && (
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-[11px] text-slate-400">
@@ -1303,7 +2304,6 @@ export default function CaseDetailPage() {
                 </div>
               )}
 
-              {/* Modal Actions */}
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                 <button
                   onClick={() => setShowUploadModal(false)}
@@ -1338,7 +2338,6 @@ export default function CaseDetailPage() {
         {inspectDoc && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-              {/* Modal Header */}
               <div className="p-5 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-blue-950 border border-blue-800 text-blue-400">
@@ -1366,7 +2365,6 @@ export default function CaseDetailPage() {
                 </button>
               </div>
 
-              {/* Tabs Navigation */}
               <div className="flex border-b border-slate-800 bg-slate-950/60 px-5 pt-2 gap-2 text-xs">
                 <button
                   onClick={() => setInspectTab("entities")}
@@ -1400,7 +2398,6 @@ export default function CaseDetailPage() {
                 </button>
               </div>
 
-              {/* Tab Contents */}
               <div className="flex-1 overflow-y-auto p-5 text-xs space-y-4">
                 {inspectTab === "entities" && (
                   <div className="space-y-4">
@@ -1472,6 +2469,20 @@ export default function CaseDetailPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {caseData && (
+          <CourtPackageModal
+            isOpen={showCourtPackageModal}
+            onClose={() => {
+              setShowCourtPackageModal(false);
+              fetchLatestCourtPackage();
+            }}
+            caseId={caseId}
+            caseNumber={caseData.case_number}
+            initialMode={courtPackageMode}
+            initialPackage={latestCourtPackage}
+          />
         )}
       </main>
     </div>

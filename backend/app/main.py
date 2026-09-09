@@ -1,13 +1,17 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from sqlalchemy import inspect, text
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.app.api.audit_routes import router as audit_router
 from backend.app.api.auth import router as auth_router
 from backend.app.api.cases import router as cases_router
 from backend.app.api.copilot import router as copilot_router
+from backend.app.api.court_package import router as court_package_router
 from backend.app.api.correlation import router as correlation_router
 from backend.app.api.dashboard import router as dashboard_router
 from backend.app.api.documents import router as documents_router
+from backend.app.api.evidence import router as evidence_router
 from backend.app.api.health import router as health_router
 from backend.app.api.search import router as search_router
 from backend.app.api.timeline import router as timeline_router
@@ -25,6 +29,20 @@ logger = setup_logging()
 def init_db():
     """Create tables and ensure default demo accounts exist."""
     Base.metadata.create_all(bind=engine)
+    # Lightweight compatibility migration for installations created before
+    # registration provenance was added. New databases receive these columns
+    # from the model definition above.
+    if "cases" in inspect(engine).get_table_names():
+        existing_columns = {column["name"] for column in inspect(engine).get_columns("cases")}
+        additions = {
+            "registration_method": "VARCHAR(32) NOT NULL DEFAULT 'MANUAL'",
+            "source_document_reference": "VARCHAR(512)",
+            "extraction_metadata": "JSON",
+        }
+        with engine.begin() as connection:
+            for name, definition in additions.items():
+                if name not in existing_columns:
+                    connection.execute(text(f"ALTER TABLE cases ADD COLUMN {name} {definition}"))
     db = SessionLocal()
     try:
         # Check if default admin exists
@@ -99,12 +117,15 @@ app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(cases_router, prefix=settings.API_V1_STR)
+app.include_router(evidence_router, prefix=settings.API_V1_STR)
+app.include_router(court_package_router, prefix=settings.API_V1_STR)
 app.include_router(documents_router, prefix=settings.API_V1_STR)
 app.include_router(search_router, prefix=settings.API_V1_STR)
 app.include_router(correlation_router, prefix=settings.API_V1_STR)
 app.include_router(timeline_router, prefix=settings.API_V1_STR)
 app.include_router(copilot_router, prefix=settings.API_V1_STR)
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
+app.include_router(audit_router)
 
 # Top-level health check alias
 app.include_router(health_router)

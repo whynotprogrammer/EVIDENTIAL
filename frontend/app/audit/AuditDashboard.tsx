@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { API_BASE_URL, getAuthHeaders } from "../../lib/api";
 
 export type AuditAction =
   | "LOGIN"
@@ -79,8 +80,9 @@ export const AuditDashboard: React.FC = () => {
       if (resourceFilter) params.append("resource", resourceFilter);
       if (statusFilter) params.append("status", statusFilter);
 
-      const res = await fetch(`/api/v1/audit/events?${params.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/audit/events?${params.toString()}`, {
         headers: {
+          ...getAuthHeaders(),
           "x-user-role": "ADMIN",
           "x-clearance": "4",
         },
