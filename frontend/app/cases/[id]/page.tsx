@@ -637,9 +637,7 @@ export default function CaseDetailPage() {
                         {documents.length}
                       </span>
                     </h2>
-                    <p className="text-[11px] text-slate-400">
-                      Immutable document storage with SHA-256 integrity validation and version tracking.
-                    </p>
+                 
                   </div>
                 </div>
 
@@ -792,9 +790,7 @@ export default function CaseDetailPage() {
                         {correlations.length} Detected
                       </span>
                     </h2>
-                    <p className="text-[11px] text-slate-400">
-                      Explainable similarities based only on available FIR fields, such as crime classification, jurisdiction, time, coordinates, and FIR-field similarity.
-                    </p>
+                    
                   </div>
                 </div>
 
@@ -942,9 +938,7 @@ export default function CaseDetailPage() {
                         {timelineEvents.length} Events
                       </span>
                     </h2>
-                    <p className="text-[11px] text-slate-400">
-                      Chronological chain-of-events synthesized from authorized FIR registration, evidence uploads, AI extractions, and investigation logs.
-                    </p>
+                   
                   </div>
                 </div>
 
